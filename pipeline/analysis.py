@@ -55,6 +55,31 @@ def plot_40bands_by_time(data, band_idxs, sl, rate, block_path, ax):
     cfs = bands.chang_lab['cfs']
     stds = bands.chang_lab['sds']
     filters = [gaussian(data, rate, cfs[idx], stds[idx]) for idx in band_idxs]
+    ht = np.squeeze(hilbert_transform(data, rate, filters).real)
+    ht, means, stds = zscore(ht, mode='file', sampling_freq=400., block_path=block_path)
+    ht = ht[:, sl]
+    x = np.linspace(-500, 800, ht.shape[1])
+    for ii in range(n_idxs):
+        y = ht[ii] / 2
+        ax.plot(x, y + ii, c=cs[ii], lw=1)
+    ax.set_xticks([-500, 0, 800])
+    ax.set_yticks(np.arange(n_idxs)[::3])
+    ax.set_yticklabels(cfs.astype(int)[band_idxs][::3])
+    ax.set_ylabel('Frequency')
+    ax.set_xlabel('Time (ms)')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+
+
+def plot_40bandsAA_by_time(data, band_idxs, sl, rate, block_path, ax):
+    n_idxs = len(band_idxs)
+    cs = make_colors(n_idxs)
+
+    cfs = bands.chang_lab['cfs']
+    stds = bands.chang_lab['sds']
+    filters = [gaussian(data, rate, cfs[idx], stds[idx]) for idx in band_idxs]
     ht = np.squeeze(abs(hilbert_transform(data, rate, filters)))
     ht, means, stds = zscore(ht, mode='file', sampling_freq=400., block_path=block_path)
     ht = ht[:, sl]
