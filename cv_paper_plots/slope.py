@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import linregress
 
-def plot_cv_slope(deep, linear, chance, labels, keys, colors, axes):
+def plot_cv_slope(deep, linear, chance, ds_sizes, labels, keys, colors, axes):
     ax0, ax1 = axes
     lw = 2
     n_subjects, _, n_iter = deep[keys[0]].shape
@@ -26,9 +26,9 @@ def plot_cv_slope(deep, linear, chance, labels, keys, colors, axes):
         for kk in range(n_iter):
             slope, intercept, r_value, p_value, std_err = linregress(keys,
                     accuracies[0, jj, :, kk])
-            slopes[0, jj, kk] = slope
+            slopes[0, jj, kk] = slope * 1000. / float(ds_sizes[jj])
             slope, intercept, r_value, p_value, std_err = linregress(keys, accuracies[1, jj, :, kk])
-            slopes[1, jj, kk] = slope
+            slopes[1, jj, kk] = slope * 1000. / float(ds_sizes[jj])
 
     ax0.set_xlim(.5, 1)
     ax0.legend(loc='best')
@@ -42,5 +42,5 @@ def plot_cv_slope(deep, linear, chance, labels, keys, colors, axes):
     ax1.set_xticks([0, 1])
     ax1.set_xticklabels(['Linear', 'Deep'])
     ax1.set_xlim(-.5, 1.5)
-    ax1.axhline(1, c='gray', linestyle='--')
+    ax1.axhline(0, c='gray', linestyle='--')
     print('turn frac units into examples units')
