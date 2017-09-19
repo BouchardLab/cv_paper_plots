@@ -1,6 +1,13 @@
-import copy, os, h5py, copy, itertools
+from pylearn2.utils import serial
+from pylearn2.config import yaml_parse
+from pylearn2.space import VectorSpace, Conv2DSpace, CompositeSpace
+from pylearn2.expr import nnet
+from pylearn2.models.mlp import FlattenerLayer
+from pylearn2.format.target_format import OneHotFormatter
+import copy, os, h5py, theano, cPickle, copy, itertools
 import numpy as np
 import matplotlib.pyplot as plt
+import theano.tensor as T
 from sklearn.linear_model import LogisticRegression as LR
 from scipy.optimize import minimize
 
@@ -23,7 +30,7 @@ def place_equiv(y, y_hat):
         else:
             return False
     else:
-        return np.nan
+        return None
 
 
 def manner_equiv(y, y_hat):
@@ -44,7 +51,7 @@ def manner_equiv(y, y_hat):
         else:
             return False
     else:
-        return np.nan
+        return None
 
 
 def consonant_equiv(y, y_hat):
