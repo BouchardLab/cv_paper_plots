@@ -326,7 +326,10 @@ def conf_mat2accuracy(c_mat=None, v_mat=None, cv_mat=None):
         for ii, cvf in enumerate(cv_mat):
             cv_accuracy[ii] = np.diag(cvf).sum()/cvf.sum()
             for jj in range(57):
-                accuracy_per_cv[ii,jj] = cvf[jj,jj]/cvf[jj].sum()
+                if cvf[jj].sum() > 0:
+                    accuracy_per_cv[ii,jj] = cvf[jj,jj]/cvf[jj].sum()
+                else:
+                    accuracy_per_cv[ii,jj] = np.nan
             for y in range(57):
                 for y_hat in range(57):
                     pval = place_equiv(y, y_hat)
