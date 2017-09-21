@@ -1,9 +1,8 @@
 import numpy as np
 
 def plot_cv_accuracy(deep, linear, random, labels, colors, ax, task='CV task',
-        legend=True):
+        legend=True, ymax=None):
     lw = 2
-    print(deep.shape)
     n_subjects, _, n_iter = deep.shape
     data = np.zeros((3, n_subjects, n_iter))
     random = random.mean(axis=(1, 2))
@@ -27,3 +26,4 @@ def plot_cv_accuracy(deep, linear, random, labels, colors, ax, task='CV task',
     ax.axhline(1, c='gray', linestyle='--')
     ax.set_ylabel('Accuracy/chance')
     ax.set_xlabel(task)
+    ax.set_ylim([None, ymax])
