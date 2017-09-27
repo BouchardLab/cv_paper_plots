@@ -248,7 +248,7 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
     for ax in [ax0, ax1]:
         ax.set_xticks([0, 100, plot_idx[-1]])
         ax.set_xticklabels([-500, 0, int(1000 * plot_time[-1])-500])
-    ax1.set_ylabel('Normalized Amplitude')
+    ax1.set_ylabel('Normalized\nAmplitude')
     ax1.set_xlabel('Time (ms)')
     ax1.set_xlim([0, plot_idx[-1]])
 
@@ -314,18 +314,37 @@ def plot_power_correlations(subject, ax, num):
         ax.hist(power_data, bins=50, histtype='step', fill=False, color='k', lw=2)
         ax.set_ylabel('Counts')
         ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
-        ax.axvline(xp, ls='--', color='k')
+        ax.axvline(xp, ls='--', color='gray')
     elif num == 2:
-        ax.scatter(power_data[pos], corr_data[pos], marker='.', c='k', alpha=.1)
+        n_groups = 7
+        pts_x = power_data[pos]
+        pts_y = corr_data[pos]
+        idxs = np.argsort(pts_x)
+        pts_x = pts_x[idxs]
+        pts_y = pts_y[idxs]
+        n_pts = pts_x.size
+        n_per_group = n_pts // n_groups
+        start_idx = 0
+        xs = []
+        ys = []
+        x_stds = []
+        y_stds = []
+        for ii in range(n_groups):
+            xs.append(pts_x[start_idx:start_idx + n_per_group].mean())
+            ys.append(pts_y[start_idx:start_idx + n_per_group].mean())
+            x_stds.append(pts_x[start_idx:start_idx + n_per_group].std())
+            y_stds.append(pts_y[start_idx:start_idx + n_per_group].std())
+            ax.errorbar(xs[-1], ys[-1], xerr=x_stds[-1], yerr=y_stds[-1], c='k')
+            start_idx += n_per_group
         ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
         ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
         x = np.linspace(0, power_data.max(), 1000)
         y = slope * x + intercept
         ax.plot(x, y, 'r--')
-        ax.plot([0, xp], [0, 0], 'k--')
-        ax.plot([xp, xp], [corr_data.min(), 0], 'k--')
+        ax.plot([0, xp], [0, 0], '--', c='gray')
+        ax.plot([xp, xp], [corr_data[pos].min(), 0], '--', c='gray')
         ax.set_ylim(corr_data[pos].min(), corr_data[pos].max())
-        ax.set_xlim(0, None)
+        ax.set_xlim(0, pts_x.max())
     elif num == 3:
         neg = power_data < 0
         ax.plot(x, y, 'r--')
