@@ -27,3 +27,5 @@ def plot_cv_accuracy(deep, linear, random, labels, colors, ax, task='CV task',
     ax.set_ylabel('Accuracy/chance')
     ax.set_xlabel(task)
     ax.set_ylim([None, ymax])
+    if ymax is not None and ymax < 3:
+        ax.set_yticks([1, 2])
