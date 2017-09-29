@@ -243,8 +243,8 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
     b /= b.max()
     b = 2. * b - 1
 
-    ax1.plot(hg, c='r', lw=4)
-    ax1.plot(b, c='k', lw=4)
+    ax1.plot(hg, c='r', lw=2)
+    ax1.plot(b, c='k', lw=2)
     for ax in [ax0, ax1]:
         ax.set_xticks([0, 100, plot_idx[-1]])
         ax.set_xticklabels([-500, 0, int(1000 * plot_time[-1])-500])
@@ -353,7 +353,7 @@ def plot_power_histogram(subjects, ax, cs=None):
                                                                             'cv_channels': power_data_not_flat >= cutoff})
     
     
-def plot_power_correlations(subjects, ax, num, cs=None):
+def plot_power_correlations(subjects, ax, num, cs=None, cutoff_pct=None):
     if not isinstance(subjects, list):
         subjects = [subjects]
         cs = len(subjects) * [cs]
@@ -363,6 +363,7 @@ def plot_power_correlations(subjects, ax, num, cs=None):
     ymin = np.inf
     ymax = -np.inf
     x_cutoff = -np.inf
+    return_cutoff_pct = []
 
     for subject, c in zip(subjects, cs):
         d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
@@ -381,6 +382,8 @@ def plot_power_correlations(subjects, ax, num, cs=None):
         yp = 0
         xp = -intercept / slope
         cutoff = xp
+        if cutoff_pct is not None:
+            cutoff = np.percentile(pos, cutoff_pct)
         x_cutoff = max(cutoff, x_cutoff)
 
         if num == 0:
@@ -434,6 +437,8 @@ def plot_power_correlations(subjects, ax, num, cs=None):
                 ax.axhline(0, 0, (x_cutoff - x_center + width / 2.) / width, linestyle='--', c='black')
             ax.set_xlim(x_center - width / 2., x_center + width / 2.)
             ax.set_ylim(y_center - width / 2., y_center + width / 2.)
+            if cutoff_pct is None:
+                return_cutoff_pct.append((pos < cutoff).sum() / pos.size)
         elif num == 1:
             neg = power_data < 0
             ax.plot(x, y, 'r--')
@@ -451,13 +456,17 @@ def plot_power_correlations(subjects, ax, num, cs=None):
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
                                                                             'cv_channels': power_data_not_flat >= cutoff})
+    return return_cutoff_pct
 
 
-def plot_resolved_power_correlations(subjects, ax):
+def plot_resolved_power_correlations(subjects, ax, cs=None):
     if not isinstance(subjects, list):
-        subjets = [subjects]
+        subjects = [subjects]
+        cs = len(subjects) * [cs]
+    if cs is None:
+        cs = len(subjects) * [cs]
 
-    for subject in subjects:
+    for subject, c in zip(subjects, cs):
         cv_channels = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_cutoff.npz'.format(subject)))['cv_channels']
 
@@ -473,8 +482,9 @@ def plot_resolved_power_correlations(subjects, ax):
         sem = xcorr_freq_high.std(axis=(1)) / np.sqrt(np.prod(xcorr_freq_high.shape[1]))
         mean = mean[idxs]
         sem = sem[idxs]
-        ax.plot(x, mean, color='r')
-        ax.fill_between(x, mean-sem, mean+sem, alpha=.5, color='r')
+        #ax.plot(x, mean, '--', color=c)
+        ax.fill_between(x, mean-sem, mean+sem, alpha=1., edgecolor=c, hatch='//',
+                        facecolor='none')
         ax.set_xlabel('Freq. (Hz)')
         ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
         
@@ -483,9 +493,9 @@ def plot_resolved_power_correlations(subjects, ax):
         sem = xcorr_freq_low.std(axis=(1)) / np.sqrt(np.prod(xcorr_freq_low.shape[1]))
         mean = mean[idxs]
         sem = sem[idxs]
-        ax.plot(x, mean, color='k')
-        ax.fill_between(x, mean-sem, mean+sem, alpha=.5, color='k')
-        ax.set_xlabel('Freq. (Hz)')
-        ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
-        ax.set_xlim(0, 40)
-        ax.set_ylim(-.2, .4)
+        #ax.plot(x, mean, color=c)
+        ax.fill_between(x, mean-sem, mean+sem, alpha=1., edgecolor=c,
+                        facecolor='none')
+    ax.set_xlabel('Freq. (Hz)')
+    ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
+    ax.set_xlim(0, 40)
