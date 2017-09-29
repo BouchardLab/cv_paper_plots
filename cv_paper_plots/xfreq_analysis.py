@@ -285,83 +285,172 @@ def plot_correlations(subject, ax, kind='freq'):
         ax.set_ylabel(r'H$\gamma$-$\beta$ Corr. Coef.')
     else:
         raise NotImplementedError
-    ax.axhline(0, linestyle='--', c='gray')
-    
-    
-def plot_power_correlations(subject, ax, num):
-    d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                '{}_correlations.npz'.format(subject)))
-    xcorr_time = d['xcorr_time']
-    power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                          '{}_hg_power.npz'.format(subject)))['power_data']
-    power_data_not_flat = np.mean(power_data[..., hg_power_s], axis=-1)
-    power_data = power_data_not_flat.ravel() 
+    ax.axhline(0, linestyle='--', c='black')
 
-    n_time = xcorr_time.shape[0]
-    corr_data = np.ravel(xcorr_time[n_time // 2])
 
-    pos = power_data >= 0
-    slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[pos], corr_data[pos])
-    yp = 0
-    xp = -intercept / slope
-    cutoff = xp
+def plot_correlation_histogram(subjects, ax, cs=None):
+    if not isinstance(subjects, list):
+        subjects = [subjects]
+        cs = len(subjects) * [cs]
 
-    if num == 0:
+    for subject, c in zip(subjects, cs):
+        d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                    '{}_correlations.npz'.format(subject)))
+        xcorr_time = d['xcorr_time']
+        power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power.npz'.format(subject)))['power_data']
+        power_data_not_flat = np.mean(power_data[..., hg_power_s], axis=-1)
+        power_data = power_data_not_flat.ravel() 
+
+        n_time = xcorr_time.shape[0]
+        corr_data = np.ravel(xcorr_time[n_time // 2])
+
+        pos = power_data >= 0
+        slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[pos], corr_data[pos])
+        yp = 0
+        xp = -intercept / slope
+        cutoff = xp
+
         ax.hist(corr_data, bins=50, histtype='step', fill=False, color='k', lw=2)
         ax.set_ylabel('Counts')
         ax.set_xlabel(r'H$\gamma$-$\beta$ Correlation (R)')
-    elif num == 1:
+
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
+                                                                            'cv_channels': power_data_not_flat >= cutoff})
+
+
+def plot_power_histogram(subjects, ax, cs=None):
+    if not isinstance(subjects, list):
+        subjects = [subjects]
+        cs = len(subjects) * [cs]
+
+    for subject, c in zip(subjects, cs):
+        d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                    '{}_correlations.npz'.format(subject)))
+        xcorr_time = d['xcorr_time']
+        power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power.npz'.format(subject)))['power_data']
+        power_data_not_flat = np.mean(power_data[..., hg_power_s], axis=-1)
+        power_data = power_data_not_flat.ravel() 
+
+        n_time = xcorr_time.shape[0]
+        corr_data = np.ravel(xcorr_time[n_time // 2])
+
+        pos = power_data >= 0
+        slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[pos], corr_data[pos])
+        yp = 0
+        xp = -intercept / slope
+        cutoff = xp
+
         ax.hist(power_data, bins=50, histtype='step', fill=False, color='k', lw=2)
         ax.set_ylabel('Counts')
         ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
-        ax.axvline(xp, ls='--', color='gray')
-    elif num == 2:
-        n_groups = 7
-        pts_x = power_data[pos]
-        pts_y = corr_data[pos]
-        idxs = np.argsort(pts_x)
-        pts_x = pts_x[idxs]
-        pts_y = pts_y[idxs]
-        n_pts = pts_x.size
-        n_per_group = n_pts // n_groups
-        start_idx = 0
-        xs = []
-        ys = []
-        x_stds = []
-        y_stds = []
-        for ii in range(n_groups):
-            xs.append(pts_x[start_idx:start_idx + n_per_group].mean())
-            ys.append(pts_y[start_idx:start_idx + n_per_group].mean())
-            x_stds.append(pts_x[start_idx:start_idx + n_per_group].std())
-            y_stds.append(pts_y[start_idx:start_idx + n_per_group].std())
-            ax.errorbar(xs[-1], ys[-1], xerr=x_stds[-1], yerr=y_stds[-1], c='k')
-            start_idx += n_per_group
-        ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
-        ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
-        x = np.linspace(0, power_data.max(), 1000)
-        y = slope * x + intercept
-        ax.plot(x, y, 'r--')
-        ax.plot([0, xp], [0, 0], '--', c='gray')
-        ax.plot([xp, xp], [corr_data[pos].min(), 0], '--', c='gray')
-        ax.set_ylim(corr_data[pos].min(), corr_data[pos].max())
-        ax.set_xlim(0, pts_x.max())
-    elif num == 3:
-        neg = power_data < 0
-        ax.plot(x, y, 'r--')
-        ax.scatter(power_data, corr_data, marker='.', c='k', alpha=.1)
-        ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
-        ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
-        slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[neg], corr_data[neg])
-        x = np.linspace(power_data.min(), 0, 1000)
-        y = slope * x + intercept
-        ax.plot(x, y, 'r--')
-        ax.set_xlim(power_data.min(), -power_data.min())
-    else:
-        raise NotImplementedError
- 
-    np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                          '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
-                                                                        'cv_channels': power_data_not_flat >= cutoff})
+        ax.axvline(xp, ls='--', color='black')
+     
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
+                                                                            'cv_channels': power_data_not_flat >= cutoff})
+    
+    
+def plot_power_correlations(subjects, ax, num, cs=None):
+    if not isinstance(subjects, list):
+        subjects = [subjects]
+        cs = len(subjects) * [cs]
+
+    xmin = np.inf
+    xmax = -np.inf
+    ymin = np.inf
+    ymax = -np.inf
+    x_cutoff = -np.inf
+
+    for subject, c in zip(subjects, cs):
+        d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                    '{}_correlations.npz'.format(subject)))
+        xcorr_time = d['xcorr_time']
+        power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power.npz'.format(subject)))['power_data']
+        power_data_not_flat = np.mean(power_data[..., hg_power_s], axis=-1)
+        power_data = power_data_not_flat.ravel() 
+
+        n_time = xcorr_time.shape[0]
+        corr_data = np.ravel(xcorr_time[n_time // 2])
+
+        pos = power_data >= 0
+        slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[pos], corr_data[pos])
+        yp = 0
+        xp = -intercept / slope
+        cutoff = xp
+        x_cutoff = max(cutoff, x_cutoff)
+
+        if num == 0:
+            if c is None:
+                c = 'k'
+            n_groups = 9
+            pts_x = power_data[pos]
+            pts_y = corr_data[pos]
+            idxs = np.argsort(pts_x)
+            pts_x = pts_x[idxs]
+            pts_y = pts_y[idxs]
+            n_pts = pts_x.size
+            n_per_group = n_pts // n_groups
+            start_idx = 0
+            xs = []
+            ys = []
+            x_stds = []
+            y_stds = []
+            for ii in range(n_groups):
+                xs.append(pts_x[start_idx:start_idx + n_per_group].mean())
+                ys.append(pts_y[start_idx:start_idx + n_per_group].mean())
+                x_stds.append(pts_x[start_idx:start_idx + n_per_group].std())
+                y_stds.append(pts_y[start_idx:start_idx + n_per_group].std())
+                ax.errorbar(xs[-1], ys[-1], xerr=x_stds[-1], yerr=y_stds[-1], c=c,
+                        alpha=.8)
+                start_idx += n_per_group
+
+            delta_x = max(.1, 1.1 * np.max(x_stds))
+            delta_y = max(.5, 1.1 * np.max(y_stds))
+            if xs[0] - delta_x < xmin:
+                xmin = xs[0] - delta_x
+            if xs[-1] + delta_x > xmax:
+                xmax = xs[-1] + delta_x
+            if ys[0] - delta_y < ymin:
+                ymin = ys[0] - delta_y
+            if ys[-1] + delta_y > ymax:
+                ymax = ys[-1] + delta_y
+            x_width = xmax - xmin
+            x_center = (xmax + xmin) / 2.
+            y_width = ymax - ymin
+            y_center = (ymax + ymin) / 2.
+            width = max(x_width, y_width)
+
+            ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
+            ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
+            x = np.linspace(xmin, xmax, 2)
+            y = slope * x + intercept
+            ax.plot(x, y, '-', c=c)
+            if cutoff > 0:
+                ax.axvline(cutoff, 0,  abs(y_center - width / 2.)/ width, linestyle='--', c='black')
+                ax.axhline(0, 0, (x_cutoff - x_center + width / 2.) / width, linestyle='--', c='black')
+            ax.set_xlim(x_center - width / 2., x_center + width / 2.)
+            ax.set_ylim(y_center - width / 2., y_center + width / 2.)
+        elif num == 1:
+            neg = power_data < 0
+            ax.plot(x, y, 'r--')
+            ax.scatter(power_data, corr_data, marker='.', c='k', alpha=.1)
+            ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
+            ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
+            slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[neg], corr_data[neg])
+            x = np.linspace(power_data.min(), 0, 1000)
+            y = slope * x + intercept
+            ax.plot(x, y, 'r--')
+            ax.set_xlim(power_data.min(), -power_data.min())
+        else:
+            raise NotImplementedError
+     
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
+                                                                            'cv_channels': power_data_not_flat >= cutoff})
 
 
 def plot_resolved_power_correlations(subjects, ax):
