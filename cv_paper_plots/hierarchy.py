@@ -190,7 +190,7 @@ def load_predictions(folder, files):
     yhs = yhs[old_idx]
     yhs = yhs[:, old_idx]
     cv_accuracy = cv_accuracy[:, old_idx]
-    return yhs, cv_accuracy, cvs
+    return yhs, cv_accuracy, r['ivl']
 
 def load_correlations(folder, files):
     def load(path):
