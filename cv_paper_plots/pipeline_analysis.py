@@ -35,7 +35,7 @@ def plot_electrodes_by_time(data, ax):
     x = np.linspace(-500, 800, n_time)
     for ii in range(n_elec):
         y = data[ii] / 3
-        ax.plot(x, y + ii, c=cs[ii], lw=2.5)
+        ax.plot(x, y + ii, c=cs[ii], lw=1.5)
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks([])
     ax.set_yticklabels([None])
@@ -45,7 +45,7 @@ def plot_electrodes_by_time(data, ax):
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-    ax.axvline(0, 0, 1, linestyle='--', c='gray')
+    ax.axvline(0, 0, 1, linestyle='--', c='black')
 
 
 def plot_40bands_by_time(data, band_idxs, sl, rate, block_path, ax):
@@ -174,7 +174,9 @@ def plot_network(n_nodes, n_layers, ax):
 
 def make_bracket(l_ys, r_ys, ax):
     lw = 2
-    ax.plot([0, 0], [0, 1], 'k', clip_on=False, lw=lw)
+    min_y = min(min(l_ys), min(r_ys))
+    max_y = max(max(l_ys), max(r_ys))
+    ax.plot([0, 0], [min_y, max_y], 'k', clip_on=False, lw=lw)
     for y in l_ys:
         ax.plot([-.1, 0], [y, y], 'k', clip_on=False, lw=lw)
     for y in r_ys:
