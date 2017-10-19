@@ -43,34 +43,6 @@ def create_dendrogram(features, labels, color_threshold=None,
     return z, r
 
 
-def corr_box_plot(p, m, v):
-    place_25 = np.sort(p)[np.round(int(p.size*.25))]
-    place_med = np.median(p)
-    place_75 = np.sort(p)[np.round(int(p.size*.75))]
-    manner_25 = np.sort(m)[np.round(int(m.size*.25))]
-    manner_med = np.median(m)
-    manner_75 = np.sort(m)[np.round(int(m.size*.75))]
-    vowel_25 = np.sort(v)[np.round(int(v.size*.25))]
-    vowel_med = np.median(v)
-    vowel_75 = np.sort(v)[np.round(int(v.size*.75))]
-    box_params = {'notch': False,
-                  'sym': '',
-                  'vert': False,
-                  'whis': 0,
-                  'labels': ('Vowel configuration', 'Constriction degree', 'Constriction location'),
-                  'medianprops': {'color': 'black', 'linewidth': 2},
-                  'boxprops': {'color': 'gray', 'linewidth': 2}}
-    data = [v, m, p]
-    f = plt.figure()
-    plt.boxplot(data, **box_params)
-    plt.xlabel('Correlation Coefficient')
-    if title:
-        plt.title(title)
-    if save_path:
-        plt.savefig(save_path)
-    return f
-
-
 def plot_dendrogram(yhs, threshold, cvs, max_d, ax):
     ax.axhline(threshold, 0, 1, linestyle='--', c='k')
 
@@ -225,21 +197,11 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
                              'Manner',
                              'Place',
                              'Maj. Art.'),
-                  'positions': [2-.375, 3-.375, 4-.375, 5-.375],
+                  'positions': [0, 1, 2, 3],
                   'medianprops': {'color': 'black', 'linewidth': 1}, 
                   'boxprops': {'color': 'black', 'linewidth': 1}} 
 
     data = [dv, dm, dp, dmjar]
     bp = ax.boxplot(data, **box_params)
-    c = 'k' 
-    for ii in range(len(bp['boxes'])):
-        plt.setp(bp['boxes'][ii], color=c)
-        plt.setp(bp['caps'][2*ii], color=c)
-        plt.setp(bp['caps'][2*ii+1], color=c)
-        plt.setp(bp['whiskers'][2*ii], color=c)
-        plt.setp(bp['whiskers'][2*ii+1], color=c)
-        plt.setp(bp['medians'][ii], color=c)
-    ax.plot(0,0, '-', c='red', label='Deep')
-    ax.plot(0,0, '-', c='black', label='Linear')
     ax.set_xlim([-.06, .65])
     ax.set_xlabel('Correlation Coefficient')
