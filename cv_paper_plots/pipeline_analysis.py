@@ -39,7 +39,10 @@ def plot_electrodes_by_time(data, ax):
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks([])
     ax.set_yticklabels([None])
-    ax.set_ylabel('Electrodes')
+    if n_elec == 1:
+        ax.set_ylabel('Electrode Voltage')
+    else:
+        ax.set_ylabel('Electrodes')
     ax.set_xlabel('Time (ms)')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -71,6 +74,7 @@ def plot_40bands_by_time(data, band_idxs, sl, rate, block_path, ax):
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
+    ax.axvline(0, 0, 1, linestyle='--', c='black')
 
 
 def plot_40bandsAA_by_time(data, band_idxs, sl, rate, block_path, ax):
@@ -96,6 +100,7 @@ def plot_40bandsAA_by_time(data, band_idxs, sl, rate, block_path, ax):
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
+    ax.axvline(0, 0, 1, linestyle='--', c='black')
 
 
 def plot_neurobands_by_time(data, sl, rate, block_path, ax):
@@ -120,6 +125,7 @@ def plot_neurobands_by_time(data, sl, rate, block_path, ax):
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
+    ax.axvline(0, 0, 1, linestyle='--', c='black')
 
 
 def plot_datapoints(data, slices, rate, block_path, axes):
@@ -151,6 +157,7 @@ def plot_datapoints(data, slices, rate, block_path, axes):
             ax.set_xticks([-500, 0, 800])
         else:
             ax.set_xticks([])
+        ax.axvline(0, 0, 1, linestyle='--', c='black')
 
 
 def plot_network(n_nodes, n_layers, ax):
