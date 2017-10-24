@@ -18,6 +18,29 @@ def plot_cv_accuracy(deep, linear, random, labels, colors, ax, task='CV task',
         yerr = np.std(y, axis=-1) / np.sqrt(n_iter)
         ax.errorbar(x, ym, yerr=yerr,
                     c=c, label=label, lw=lw)
+    diff = data[1] - data[0]
+    print(('{} classification accuracy (XX way) improves from {} $\pm$ ' +
+          '{}\%  to {} $\pm$ {}\% across subjects for logistic regression ' +
+          'compared to deep networks respectively. The highest single subject ' +
+          '{} accuracies are for Subject 1 which are {}$\pm$ {}\% ' +
+          '({} times chance, {}\%) and {}$\pm$ {}\% ({} times chance, ' +
+          '{}\%) for logistic regression and deep networks ' +
+          'respectively, which is a {}\% ' +
+          'improvement.').format(task.split(' ')[0],
+                                np.round(100 * data[0].mean(), 1),
+                                np.round(100 * data[0].std(), 1),
+                                np.round(100 * data[1].mean(), 1),
+                                np.round(100 * data[1].std(), 1),
+                                task.split(' ')[0].lower(),
+                                np.round(100 * data[0,0].mean(), 1),
+                                np.round(100 * data[0,0].std(), 1),
+                                int(np.round((data[0,0] / data[2,0]).mean(), 0)),
+                                np.round(100 * data[2,0].mean(), 1),
+                                np.round(100 * data[1,0].mean(), 1),
+                                np.round(100 * data[1,0].std(), 1),
+                                int(np.round((data[1,0] / data[2,0]).mean(), 0)),
+                                np.round(100 * data[2,0].mean(), 1),
+                                np.round(100 * ((data[1, 0] / data[0,0]).mean() - 1), 1)))
     if legend:
         ax.legend(loc='best')
     ax.set_xticks([0, 1])
