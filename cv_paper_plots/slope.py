@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import linregress
 
-def plot_cv_slope(deep, linear, random, training_size, labels, keys, colors, axes):
+def plot_cv_slope(deep, linear, random, training_size, keys, colors, axes):
     ax0, ax1 = axes
     lw = 2
     n_subjects, _, n_iter = deep[keys[0]].shape
@@ -12,19 +12,19 @@ def plot_cv_slope(deep, linear, random, training_size, labels, keys, colors, axe
         deepi = deep[key]
         lineari = linear[key]
         randomi = random[:, ii]
-        for jj, label in enumerate(labels):
+        for jj in range(n_subjects):
             accuracies[0, jj, ii] = lineari[jj, 2]
             accuracies[1, jj, ii] = deepi[jj, 2]
             accuracies[2, jj, ii] = randomi[jj].mean(axis=(0, 1))
 
-    for jj, (label, c) in enumerate(zip(labels, colors)):
+    for jj, c in enumerate(colors):
         x = np.array(keys) + .004 * (jj - 1.5)
         y = accuracies[1, jj] / accuracies[2, jj]
         y = accuracies[1, jj] / accuracies[2, jj, -1]
         ym = y.mean(axis=-1)
         yerr = y.std(axis=-1) / np.sqrt(n_iter)
         ax0.errorbar(x, ym, yerr=yerr,
-                    c=c, label=label, lw=lw)
+                    c=c, label='Subject {}'.format(jj+1), lw=lw)
 
         x = np.array(keys) + .004 * (jj - 1.5) + .002
         y = accuracies[0, jj] / accuracies[2, jj]
@@ -52,18 +52,42 @@ def plot_cv_slope(deep, linear, random, training_size, labels, keys, colors, axe
     ax0.set_xlabel('Training dataset fraction')
     ax0.set_ylabel('Accuracy/chance')
 
-    for ii, (label, c) in enumerate(zip(labels, colors)):
+    for ii, c in enumerate(colors):
         x = np.array([0, 1]) + .05 * (ii - 1.5)
         y = slopes[:, ii]
         ym = y.mean(axis=-1)
         yerr = y.std(axis=-1) / np.sqrt(n_iter)
         ax1.errorbar(x, ym, yerr=yerr,
-                     c=c, label=label, lw=lw)
-    ax1.legend(loc='best')
+                     c=c, lw=lw)
     ax1.set_xticks([0, 1])
     ax1.set_xticklabels(['Linear', 'Deep'])
     ax1.set_xlim(-.5, 1.5)
     ax1.axhline(0, c='gray', linestyle='--')
     ax1.set_xlabel('CV task')
     ax1.set_ylabel(r'$\Delta$ Accuracy/chance per 1k training examples')
-    print('turn frac units into examples units')
+    print(slopes.shape)
+    print(('Deep networks scale better with dataset size than logistic regresion ' +
+           'with an improvement of {} $\pm$ {}  and {} $\pm$ {} ' +
+           'over chance per 1000 training samples respectively. This improvement ' +
+           'is summarized across subjects in Fig \\ref{}fig:slope{}B. ' +
+           'For the subject with highest accuracy (Subject 1), the ' +
+           'change in accuracy over chance per 1000 training examples ' +
+           'for deep networks and logistic regression are ' +
+           '{} $\pm$ {} and {} $\pm$ {} respectively. ' +
+           'For the subject with highest slope (Subject 4), the ' +
+           'change in accuracy over chance per 1000 training examples ' +
+           'for deep networks and logistic regression are ' +
+           '{} $\pm$ {} and {} $\pm$ {} respectively.').format(np.round(slopes[1].mean(), 1),
+                                       np.round(slopes[1].std(), 1),
+                                       np.round(slopes[0].mean(), 1),
+                                       np.round(slopes[0].std(), 1),
+                                       '{',
+                                       '}',
+                                       np.round(slopes[1, 0].mean(), 1),
+                                       np.round(slopes[1, 0].std(), 1),
+                                       np.round(slopes[0, 0].mean(), 1),
+                                       np.round(slopes[0, 0].std(), 1),
+                                       np.round(slopes[1, 3].mean(), 1),
+                                       np.round(slopes[1, 3].std(), 1),
+                                       np.round(slopes[0, 3].mean(), 1),
+                                       np.round(slopes[0, 3].std(), 1)))
