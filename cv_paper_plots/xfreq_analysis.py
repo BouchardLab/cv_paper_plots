@@ -213,46 +213,52 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
         CV to select.
     """
     ax0, ax1 = axes
+    axes = [ax for ax in axes if (ax is not None)]
     power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                           '{}_{}_{}_power.npz'.format(subject, cv, channel)))['power_data']
 
-    im = ax0.imshow(power_data[::-1, s], interpolation='nearest', cmap='afmhot', aspect='auto', vmin=vmin, vmax=vmax)
-    ax0.set_yticks(np.arange(0, 40, 5))
-    ax0.set_yticklabels(bands.chang_lab['cfs'][::-5].astype(int))
-    ax0.set_title('{}, electrode: {}'.format(subject_labels[subject], channel))
-    ax0.set_ylabel('Freq. (Hz)')
-    ax0.set_xlabel('Time (ms)')
+    if ax0 is not None:
+        im = ax0.imshow(power_data[::-1, s], interpolation='nearest', cmap='afmhot',
+                        aspect='auto', vmin=vmin, vmax=vmax)
+        ax0.set_yticks(np.arange(0, 40, 10))
+        ax0.set_yticklabels(bands.chang_lab['cfs'][::-10].astype(int))
+        #ax0.set_title('{}\nelectrode: {}'.format(subject_labels[subject], channel))
+        ax0.set_title('Electrode: {}'.format(channel), fontsize=10)
+        ax0.set_ylabel('Freq. (Hz)')
+        ax0.set_xlabel('Time (ms)')
 
-    hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
-                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
-    b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
-                             bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
+    if ax1 is not None:
+        hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
+                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
+        b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
+                                 bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
 
-    hb_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][3],
-                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
-    b_bands = np.logical_or(b_bands, hb_bands)
-    b_bands = range(10, 21)
-    hg = power_data[hg_bands].mean(axis=0)
-    b = power_data[b_bands].mean(axis=0)
+        hb_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][3],
+                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
+        b_bands = np.logical_or(b_bands, hb_bands)
+        b_bands = range(10, 21)
+        hg = power_data[hg_bands].mean(axis=0)
+        b = power_data[b_bands].mean(axis=0)
 
-    b = b[s]
-    hg = hg[s]
+        b = b[s]
+        hg = hg[s]
 
-    hg -= hg.min()
-    hg /= hg.max()
-    hg = 2. * hg - 1
-    b -= b.min()
-    b /= b.max()
-    b = 2. * b - 1
+        hg -= hg.min()
+        hg /= hg.max()
+        hg = 2. * hg - 1
+        b -= b.min()
+        b /= b.max()
+        b = 2. * b - 1
 
-    ax1.plot(hg, c='r', lw=2)
-    ax1.plot(b, c='k', lw=2)
-    for ax in [ax0, ax1]:
+        ax1.plot(hg, c='r', lw=2)
+        ax1.plot(b, c='k', lw=2)
+        ax1.set_ylabel('Normalized\nAmplitude')
+        ax1.set_xlabel('Time (ms)')
+        ax1.set_xlim([0, plot_idx[-1]])
+    for ax in axes:
         ax.set_xticks([0, 100, plot_idx[-1]])
         ax.set_xticklabels([-500, 0, int(1000 * plot_time[-1])-500])
-    ax1.set_ylabel('Normalized\nAmplitude')
-    ax1.set_xlabel('Time (ms)')
-    ax1.set_xlim([0, plot_idx[-1]])
+    return im
 
 
 def plot_correlations(subjects, ax, kind='freq'):
@@ -426,7 +432,7 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
                 x_stds.append(x.std() / np.sqrt(x.size))
                 y_stds.append(y.std() / np.sqrt(y.size))
                 ax.errorbar(xs[-1], ys[-1], xerr=x_stds[-1], yerr=y_stds[-1], c=c,
-                        alpha=.8)
+                        alpha=1.)
                 start_idx += n_per_group
 
             delta_x = max(.02, 1.1 * np.max(x_stds))
@@ -446,7 +452,7 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
             ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
             x = np.linspace(min(xs), max(xs), 2)
             y = slope * x + intercept
-            ax.plot(x, y, '-', c=c)
+            ax.plot(x, y, '-', c=c, alpha=.5)
             if cutoff_pct is None:
                 return_cutoff_pct.append((pos < cutoff).sum() / pos.size)
         else:
@@ -474,17 +480,21 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
     for cutoff, x_cutoff in zip(cutoffs, x_cutoffs):
         if cutoff > 0:
             ax.axvline(cutoff, 0,  abs(y_center - width / 2.)/ width,
-                       linestyle='--', c='blue', lw=1.)
+                       linestyle='--', c='gray', lw=1.)
             ax.axhline(0, 0, (x_cutoff - x_center + width / 2.) / width,
-                       linestyle='--', c='blue', lw=1.)
+                       linestyle='--', c='gray', lw=1.)
     ax.set_xlim(x_center - width / 2., x_center + width / 2.)
     ax.set_ylim(y_center - width / 2., y_center + width / 2.)
+    ax.set_xticks([0, .75])
     return return_cutoff_pct
 
 
 def plot_resolved_power_correlations(subjects, ax):
     if not isinstance(subjects, list):
         subjects = [subjects]
+    colors = {'ec2': ['red', 'pink'],
+              'gp33': ['black', 'gray']}
+
 
     for subject in subjects:
         c = subject_colors[subject]
@@ -503,11 +513,17 @@ def plot_resolved_power_correlations(subjects, ax):
         sem = xcorr_freq_high.std(axis=(1)) / np.sqrt(np.prod(xcorr_freq_high.shape[1]))
         mean = mean[idxs]
         sem = sem[idxs]
+        """
         ax.plot(x, mean, '-', color=c, lw=.5)
         ax.fill_between(x, mean-sem, mean+sem, alpha=1., edgecolor=c,
                         facecolor='none', hatch='//', lw=.5)
         ax.fill_between(x, mean-sem, mean+sem, alpha=.5, edgecolor='none',
                         facecolor=c)
+        """
+        c = colors[subject][0]
+        ax.plot(x, mean, '-', color=c, lw=1.)
+        ax.fill_between(x, mean-sem, mean+sem, edgecolor=c,
+                        facecolor=c, alpha=.3)
         ax.set_xlabel('Freq. (Hz)')
         ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
 
@@ -516,10 +532,17 @@ def plot_resolved_power_correlations(subjects, ax):
         sem = xcorr_freq_low.std(axis=(1)) / np.sqrt(np.prod(xcorr_freq_low.shape[1]))
         mean = mean[idxs]
         sem = sem[idxs]
+        """
         ax.plot(x, mean, color=c, lw=.5)
         ax.fill_between(x, mean-sem, mean+sem, alpha=.5, edgecolor='none',
                         facecolor=c)
+        """
+        c = colors[subject][1]
+        ax.plot(x, mean, '-', color=c, lw=1.)
+        ax.fill_between(x, mean-sem, mean+sem, edgecolor=c,
+                        facecolor=c, alpha=.3)
     ax.set_xlabel('Freq. (Hz)')
     ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
     ax.set_xlim(0, 40)
-    ax.axhline(0, linestyle='--', c='blue', lw=1.)
+    ax.axhline(0, linestyle='--', c='blue', lw=.5)
+    ax.axhline(.25, 15./40, 29./40, linestyle='-', c='gray', lw=2.)
