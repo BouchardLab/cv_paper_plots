@@ -173,6 +173,62 @@ def save_correlations(f, subject, channel=None):
                           '{}_correlations.npz'.format(subject)), **{'xcorr_freq': xcorr_freq,
                                                                            'xcorr_time': xcorr_time,
                                                                     'acorr_time': acorr_time})
+def save_time_correlations(f, subject, channel=None):
+    good_examples, good_channels = good_examples_and_channels(f['X0'].value)
+    n_time = f['X0'].shape[-1]
+    assert plot_idx[-1] <= n_time
+    n_time = plot_idx[-1]
+
+    vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
+    vsmc_electrodes = np.zeros(256)
+    vsmc_electrodes[vsmc] = 1 
+
+    good_examples = np.nonzero(good_examples)[0].tolist()
+
+    good_channels = np.nonzero(vsmc_electrodes * good_channels)[0].tolist()
+    if channel is not None:
+        assert channel in good_channels
+        good_channels = [channel]
+
+    cv_idxs, n_cv = get_cv_idxs(f['y'].value, good_examples)
+
+    n_ch = len(good_channels)
+    n_ex = len(good_examples)
+
+    def normalize(a, axis=-1):
+        a -= np.mean(a, axis=-1, keepdims=True)
+        a /= np.linalg.norm(a, axis=-1, keepdims=True)
+        return a
+
+    hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
+                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
+    b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
+                             bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
+    hb_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][3],
+                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
+    b_bands = np.logical_or(b_bands, hb_bands)
+    b_bands = range(10, 21) 
+
+    hg_ts = np.zeros((hg_bands.sum(), n_cv, n_ch, n_time))
+    for ii, c in enumerate(np.nonzero(hg_bands)[0]):
+        for jj, idxs in enumerate(cv_idxs):
+            hg_ts[ii, jj] = f['X{}'.format(c)][idxs][:, good_channels].mean(axis=0)[..., s]
+    hg_ts = np.mean(hg_ts, axis=0)
+    hg_ts = normalize(hg_ts, axis=0)
+
+    b_ts = np.zeros((len(b_bands), n_cv, n_ch, n_time))
+    for ii, c in enumerate(b_bands):
+        for jj, idxs in enumerate(cv_idxs):
+            b_ts[ii, jj] = f['X{}'.format(c)][idxs][:, good_channels].mean(axis=0)[..., s]
+    b_ts = np.mean(b_ts, axis=0)
+    b_ts = normalize(b_ts, axis=0)
+
+    xcorr_time = np.sum(hg_ts * b_ts, axis=0)
+
+
+    np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                          '{}_time_correlations.npz'.format(subject)), **{'xcorr_time': xcorr_time})
+
 
 def save_hg_power(f, subject):
     vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
@@ -220,9 +276,13 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
     if ax0 is not None:
         im = ax0.imshow(power_data[::-1, s], interpolation='nearest', cmap='afmhot',
                         aspect='auto', vmin=vmin, vmax=vmax)
-        ax0.set_yticks(np.arange(0, 40, 10))
-        ax0.set_yticklabels(bands.chang_lab['cfs'][::-10].astype(int))
-        #ax0.set_title('{}\nelectrode: {}'.format(subject_labels[subject], channel))
+        yticklabels = [5, 25, 75]
+        yticks = [40-np.searchsorted(bands.chang_lab['cfs'], y, side='right') for y in
+                  yticklabels]
+        yticklabels.append(200)
+        yticks.append(0)
+        ax0.set_yticks(yticks)
+        ax0.set_yticklabels(yticklabels)
         ax0.set_title('Electrode: {}'.format(channel), fontsize=10)
         ax0.set_ylabel('Freq. (Hz)')
         ax0.set_xlabel('Time (ms)')
@@ -297,7 +357,33 @@ def plot_correlations(subjects, ax, kind='freq'):
             ax.set_ylabel(r'H$\gamma$-$\beta$ Corr. Coef.')
         else:
             raise NotImplementedError
-    ax.axhline(0, linestyle='--', c='blue', lw=1.)
+    ax.axhline(0, linestyle='--', c='gray', lw=1.)
+
+
+def plot_time_correlations(subjects, ax):
+    if not isinstance(subjects, list):
+        subjects = [subjects]
+    for subject in subjects:
+        c = subject_colors[subject]
+        d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                    '{}_time_correlations.npz'.format(subject)))
+        xcorr_time = d['xcorr_time']
+
+        mean = xcorr_time.mean(axis=0)
+        sem = xcorr_time.std(axis=0) / np.sqrt(xcorr_time.shape[0])
+        x = np.arange(mean.size)
+        mean = mean
+        sem = sem
+        ax.plot(x, mean, c)
+        ax.fill_between(x, mean-sem, mean+sem, alpha=.5,
+                facecolor=c)
+        #ax.set_xlim(0, 40)
+        #ax.set_ylim(-.2, None)
+        ax.set_xlabel('Time (ms)')
+        ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
+    ax.axhline(0, linestyle='--', c='gray', lw=1.)
+    ax.set_xticks([0, 100, plot_idx[-1]])
+    ax.set_xticklabels([-500, 0, int(1000 * plot_time[-1])-500])
 
 
 def plot_correlation_histogram(subjects, ax, cs=None):
@@ -326,6 +412,7 @@ def plot_correlation_histogram(subjects, ax, cs=None):
         ax.hist(corr_data, bins=50, histtype='step', fill=False, color='k', lw=2)
         ax.set_ylabel('Counts')
         ax.set_xlabel(r'H$\gamma$-$\beta$ Correlation (R)')
+        ax.axvline(0, ls='--', color='gray', lw=1)
 
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
@@ -358,7 +445,7 @@ def plot_power_histogram(subjects, ax, cs=None):
         ax.hist(power_data, bins=50, histtype='step', fill=False, color='k', lw=2)
         ax.set_ylabel('Counts')
         ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
-        ax.axvline(xp, ls='--', color='black')
+        ax.axvline(xp, ls='--', color='gray', lw=1)
 
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
@@ -492,9 +579,6 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
 def plot_resolved_power_correlations(subjects, ax):
     if not isinstance(subjects, list):
         subjects = [subjects]
-    colors = {'ec2': ['red', 'pink'],
-              'gp33': ['black', 'gray']}
-
 
     for subject in subjects:
         c = subject_colors[subject]
@@ -520,7 +604,7 @@ def plot_resolved_power_correlations(subjects, ax):
         ax.fill_between(x, mean-sem, mean+sem, alpha=.5, edgecolor='none',
                         facecolor=c)
         """
-        c = colors[subject][0]
+        c = subject_colors[subject]
         ax.plot(x, mean, '-', color=c, lw=1.)
         ax.fill_between(x, mean-sem, mean+sem, edgecolor=c,
                         facecolor=c, alpha=.3)
@@ -537,12 +621,11 @@ def plot_resolved_power_correlations(subjects, ax):
         ax.fill_between(x, mean-sem, mean+sem, alpha=.5, edgecolor='none',
                         facecolor=c)
         """
-        c = colors[subject][1]
         ax.plot(x, mean, '-', color=c, lw=1.)
         ax.fill_between(x, mean-sem, mean+sem, edgecolor=c,
                         facecolor=c, alpha=.3)
     ax.set_xlabel('Freq. (Hz)')
     ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
     ax.set_xlim(0, 40)
-    ax.axhline(0, linestyle='--', c='blue', lw=.5)
+    ax.axhline(0, linestyle='--', c='gray', lw=.5)
     ax.axhline(.25, 15./40, 29./40, linestyle='-', c='gray', lw=2.)

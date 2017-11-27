@@ -1,6 +1,10 @@
 import numpy as np
+from .style import subject_colors as colors, subject_labels as labels
 
-def plot_cv_accuracy(deep, linear, random, colors, ax, task='CV task',
+
+colors = subject_colors
+
+def plot_cv_accuracy(subjects, deep, linear, random, ax, task='CV task',
         legend=True, ymax=None):
     lw = 2
     n_subjects, _, n_iter = deep.shape
@@ -11,13 +15,13 @@ def plot_cv_accuracy(deep, linear, random, colors, ax, task='CV task',
         data[1, ii] = deep[ii, 2]
         data[2, ii] = random[ii]
 
-    for ii, c in enumerate(colors):
+    for ii, s in enumerate(subjects):
         x = np.array([0, 1]) + .05 * (ii-1.5)
         y = data[:2, ii] / data[2, ii][np.newaxis,...]
         ym = np.mean(y, axis=-1)
         yerr = np.std(y, axis=-1) / np.sqrt(n_iter)
         ax.errorbar(x, ym, yerr=yerr,
-                    c=c, label='Subject {}'.format(ii+1), lw=lw)
+                    c=colors[s], label=labels[s], lw=lw)
     diff = data[1] - data[0]
     print(('{} classification accuracy (XX way) improves from {} $\pm$ ' +
           '{}\%  to {} $\pm$ {}\% across subjects for logistic regression ' +
@@ -46,7 +50,7 @@ def plot_cv_accuracy(deep, linear, random, colors, ax, task='CV task',
     ax.set_xticks([0, 1])
     ax.set_xticklabels(['Linear', 'Deep'])
     ax.set_xlim(-.5, 1.5)
-    ax.axhline(1, c='gray', linestyle='--')
+    ax.axhline(1, c='gray', linestyle='--', lw=1)
     ax.set_ylabel('Accuracy/chance')
     ax.set_xlabel(task)
     ax.set_ylim([None, ymax])

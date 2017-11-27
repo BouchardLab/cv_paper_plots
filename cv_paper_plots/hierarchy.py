@@ -5,6 +5,8 @@ import functools
 from scipy import cluster
 import matplotlib.pyplot as plt
 
+from .style import axes_label_fontsize, ticklabel_fontsize
+
 
 def create_dendrogram(features, labels, color_threshold=None,
                       title=None, save_path=None, ax=None):
@@ -17,7 +19,7 @@ def create_dendrogram(features, labels, color_threshold=None,
         while child > 56:
             child = z[child-57, 0].astype(int)
         if dist > thresh:
-            set_c = 'k'
+            set_c = 'gray'
         else:
             for c, idxs in groups.items():
                 if child in idxs:
@@ -30,10 +32,10 @@ def create_dendrogram(features, labels, color_threshold=None,
     old_idx = []
     for cv in r['ivl']:
         old_idx.append(labels.index(cv))
-    groups = {'#1f77b4': old_idx[0:13],
-              '#ff7f0e': old_idx[13:25],
-              '#2ca02c': old_idx[25:42],
-              '#9467bd': old_idx[42:57]}
+    groups = {'green': old_idx[0:13],
+              'red': old_idx[13:25],
+              'blue': old_idx[25:36],
+              'black': old_idx[36:57]}
 
     if color_threshold is not None:
         r = cluster.hierarchy.dendrogram(z, labels=labels,
@@ -44,19 +46,20 @@ def create_dendrogram(features, labels, color_threshold=None,
 
 
 def plot_dendrogram(yhs, threshold, cvs, max_d, ax):
-    ax.axhline(threshold, 0, 1, linestyle='--', c='k')
+    ax.axhline(threshold, 0, 1, linestyle='--', c='k', lw=1)
 
     z, r = create_dendrogram(yhs, cvs, threshold, ax=ax)
     ax.set_xticks([])
-    ax.set_ylabel('Distance')
+    ax.set_ylabel('Distance', fontsize=axes_label_fontsize)
     ax.set_ylim(None, max_d)
     ax.set_yticks([0, max_d])
-    ax.set_yticklabels([0, max_d], fontsize=8)
+    ax.set_yticklabels([0, max_d])
+    ax.tick_params(labelsize=ticklabel_fontsize)
     return z, r
 
 
 def plot_distance_vs_clusters(z, threshold, max_d, ax):
-    ax.axhline(threshold, 0, 1, linestyle='--', c='k')
+    ax.axhline(threshold, 0, 1, linestyle='--', c='k', lw=1)
     ds = z[:, 2]
     bins = np.linspace(0, ds.max(), 1000)
     h, b = np.histogram(ds, bins, density=False)
@@ -66,7 +69,8 @@ def plot_distance_vs_clusters(z, threshold, max_d, ax):
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_ylim(None, max_d)
-    ax.set_xlabel('# Clusters')
+    ax.tick_params(labelsize=ticklabel_fontsize)
+    ax.set_xlabel('Num. Clusters', fontsize=axes_label_fontsize)
 
 
 def plot_cv_accuracy(cv_accuracy, ax):
@@ -77,48 +81,46 @@ def plot_cv_accuracy(cv_accuracy, ax):
     ax.set_yticks([])
     ax.set_xticks([0, .5])
     ax.set_xticklabels([0, .5])
-    ax.tick_params(labelsize=8)
-    ax.set_xlabel('Accuracy')
+    ax.tick_params(labelsize=ticklabel_fontsize)
+    ax.set_xlabel('Accuracy', fontsize=axes_label_fontsize)
 
 
 def plot_soft_confusion(yhs, r, f, ax, cax):
     im = ax.imshow(yhs, cmap='gray_r', interpolation='nearest',
             vmin=0, vmax=yhs.max())
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
     ax.set_xticks(np.linspace(0, 56, 57))
     ax.set_xticklabels(r['ivl'], rotation='vertical', fontsize=6)
     ax.set_yticks(np.linspace(0, 56, 57))
     ax.set_yticklabels(r['ivl'], fontsize=6)
-    ax.set_ylabel('Target CV')
-    ax.set_xlabel('Predicted CV')
+    ax.set_ylabel('Target CV', fontsize=axes_label_fontsize)
+    ax.set_xlabel('Predicted CV', fontsize=axes_label_fontsize)
     ax.xaxis.tick_top()
-    ax.yaxis.tick_right()
+    ax.yaxis.tick_left()
 
-    tick_offset = -.01
+    tick_offset = .02
     tick_scale = -.05
     pos = 0
     for label in ax.yaxis.get_majorticklabels():
-        label.set_position([1+tick_scale*(((pos+1)%2)-.5)-tick_offset, 1])
+        label.set_position([tick_scale*(((pos+1)%2)-.5)-tick_offset, 1])
         pos += 1
 
+    tick_offset = -.02
+    tick_scale = -.05
     pos = 0
     for label in ax.xaxis.get_majorticklabels():
         label.set_position([0, 1+tick_scale*(((pos+1)%2)-.5)-tick_offset])
         pos += 1
+    ax.tick_params(labelsize=ticklabel_fontsize-2)
 
-    c = f.colorbar(im, cax=cax)
+    c = f.colorbar(im, cax=cax, orientation='horizontal')
     c.set_ticks([0, .1])
-    c.ax.tick_params(labelsize=8)
-    cax.set_ylabel('Probability')
+    c.ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def load_predictions(folder, files):
-    consonants = sorted(['b', 'd', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'r',
-                         's', 'sh', 't', 'th', 'v', 'w', 'y', 'z'])
-    vowels = sorted(['aa', 'ee', 'oo'])
+    consonants = ['b', 'd', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'r',
+                  's', r'$\int$', 't', r'$\theta$', 'v', 'w', 'y', 'z']
+    vowels = ['a', 'i', 'u']
 
     cvs = []
     for c in consonants:
@@ -190,7 +192,7 @@ def load_correlations(folder, files):
 def plot_correlations(dp, dm, dv, dmjar, ax):
 
     box_params = {'notch': False,
-                  'sym': '', 
+                  'sym': '',
                   'vert': False,
                   'whis': 0,
                   'labels': ('Vowel',
@@ -198,10 +200,11 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
                              'Place',
                              'Maj. Art.'),
                   'positions': [0, 1, 2, 3],
-                  'medianprops': {'color': 'black', 'linewidth': 1}, 
-                  'boxprops': {'color': 'black', 'linewidth': 1}} 
+                  'medianprops': {'color': 'black', 'linewidth': 1},
+                  'boxprops': {'color': 'black', 'linewidth': 1}}
 
     data = [dv, dm, dp, dmjar]
     bp = ax.boxplot(data, **box_params)
     ax.set_xlim([-.06, .65])
-    ax.set_xlabel('Correlation Coefficient')
+    ax.set_xlabel('Correlation Coefficient', fontsize=axes_label_fontsize)
+    ax.tick_params(labelsize=ticklabel_fontsize)
