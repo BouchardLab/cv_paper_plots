@@ -1,7 +1,10 @@
 import numpy as np
 from scipy.stats import linregress
 
-from .style import subject_colors as colors, subject_labels as labels
+from .style import (subject_colors as colors,
+                    subject_labels as labels,
+                    ticklabel_fontsize,
+                    axes_label_fontsize)
 
 def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
                   legend=False):
@@ -53,8 +56,8 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
     if legend:
         ax0.legend(loc='best')
     ax0.axhline(1, c='gray', linestyle='--', lw=1)
-    ax0.set_xlabel('Training dataset fraction')
-    ax0.set_ylabel('Accuracy/chance')
+    ax0.set_xlabel('Training dataset fraction', fontsize=axes_label_fontsize)
+    ax0.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
 
     for ii, s in enumerate(subjects):
         x = np.array([0, 1]) + .05 * (ii - 1.5)
@@ -67,8 +70,9 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
     ax1.set_xticklabels(['Linear', 'Deep'])
     ax1.set_xlim(-.5, 1.5)
     ax1.axhline(0, c='gray', linestyle='--', lw=1)
-    ax1.set_xlabel('CV task')
-    ax1.set_ylabel(r'$\Delta$ Accuracy/chance per 1k training examples')
+    ax1.set_xlabel('CV task', fontsize=axes_label_fontsize)
+    ax1.set_ylabel(r'$\Delta$ Accuracy/chance per 1k training examples',
+                   fontsize=axes_label_fontsize)
     print(slopes.shape)
     print(('Deep networks scale better with dataset size than logistic regresion ' +
            'with an improvement of {} $\pm$ {}  and {} $\pm$ {} ' +
@@ -95,3 +99,5 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
                                        np.round(slopes[1, 3].std(), 1),
                                        np.round(slopes[0, 3].mean(), 1),
                                        np.round(slopes[0, 3].std(), 1)))
+    for ax in axes:
+        ax.tick_params(labelsize=ticklabel_fontsize)

@@ -12,6 +12,8 @@ from ecog.tokenize.transcripts import parse, make_df
 from ecog.utils import bands
 from ecog.signal_processing import zscore
 
+from .style import axes_label_fontsize, ticklabel_fontsize
+
 def make_slice(idx, transcript, rate):
     align = transcript['align'].loc[idx]
     start_idx = int(rate * (align-.5))
@@ -43,12 +45,13 @@ def plot_electrodes_by_time(data, ax):
         ax.set_ylabel('Electrode Voltage')
     else:
         ax.set_ylabel('Electrodes')
-    ax.set_xlabel('Time (ms)')
+    ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
     ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_40bands_by_time(data, band_idxs, sl, rate, block_path, ax):
@@ -68,13 +71,14 @@ def plot_40bands_by_time(data, band_idxs, sl, rate, block_path, ax):
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks(np.arange(n_idxs)[::3])
     ax.set_yticklabels(cfs.astype(int)[band_idxs][::3])
-    ax.set_ylabel('Frequency')
-    ax.set_xlabel('Time (ms)')
+    ax.set_ylabel('Frequency', fontsize=axes_label_fontsize)
+    ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
     ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_40bandsAA_by_time(data, band_idxs, sl, rate, block_path, ax):
@@ -94,13 +98,14 @@ def plot_40bandsAA_by_time(data, band_idxs, sl, rate, block_path, ax):
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks(np.arange(n_idxs)[::3])
     ax.set_yticklabels(cfs.astype(int)[band_idxs][::3])
-    ax.set_ylabel('Frequency')
-    ax.set_xlabel('Time (ms)')
+    ax.set_ylabel('Frequency', fontsize=axes_label_fontsize)
+    ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
     ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_neurobands_by_time(data, sl, rate, block_path, ax):
@@ -108,7 +113,7 @@ def plot_neurobands_by_time(data, sl, rate, block_path, ax):
     cs = make_colors(n_bands)
     cfs = bands.chang_lab['cfs']
     stds = bands.chang_lab['sds']
-    
+
     for ii, (minf, maxf) in enumerate(zip(bands.neuro['min_freqs'], bands.neuro['max_freqs'])):
         filters = [gaussian(data, rate, c, s) for c, s in zip(cfs, stds) if ((c >= minf) and (c <= maxf))]
         ht = np.squeeze(abs(hilbert_transform(data, rate, filters)))
@@ -119,13 +124,14 @@ def plot_neurobands_by_time(data, sl, rate, block_path, ax):
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks(np.arange(n_bands))
     ax.set_yticklabels([r'$\theta$', r'$\alpha$', r'low $\beta$', r'high $\beta$', r'$\gamma$', r'high $\gamma$'])
-    ax.set_ylabel('Frequency band')
-    ax.set_xlabel('Time (ms)')
+    ax.set_ylabel('Frequency band', fontsize=axes_label_fontsize)
+    ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
     ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_datapoints(data, slices, rate, block_path, axes):
@@ -133,7 +139,7 @@ def plot_datapoints(data, slices, rate, block_path, axes):
     cs = make_colors(n_elects)
     cfs = bands.chang_lab['cfs']
     stds = bands.chang_lab['sds']
-    
+
     minf = bands.neuro['min_freqs'][-1]
     maxf = bands.neuro['max_freqs'][-1]
     filters = [gaussian(data, rate, c, s) for c, s in zip(cfs, stds) if ((c >= minf) and (c <= maxf))]
@@ -153,11 +159,12 @@ def plot_datapoints(data, slices, rate, block_path, axes):
         if ii == 0:
             ax.set_ylabel(r'Electrodes high $\gamma$')
         if ii == (len(slices)-1):
-            ax.set_xlabel('Time (ms)')
+            ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
             ax.set_xticks([-500, 0, 800])
         else:
             ax.set_xticks([])
         ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_network(n_nodes, n_layers, ax):
@@ -177,6 +184,7 @@ def plot_network(n_nodes, n_layers, ax):
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis('off')
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def make_bracket(l_ys, r_ys, ax):

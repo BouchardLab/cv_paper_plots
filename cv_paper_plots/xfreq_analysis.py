@@ -2,10 +2,12 @@ import h5py, os
 
 import numpy as np
 from scipy import stats
+from sklearn.linear_model import (LinearRegression, HuberRegressor,
+                                  RANSACRegressor, TheilSenRegressor)
 
 from ecog.utils import bands
 from .style import (subject_labels, subject_colors,
-                    axes_label_fontsize, ticklabel_fontsize, letter_fontsize)
+                    axes_label_fontsize, ticklabel_fontsize)
 
 
 plot_time = np.array([0, .5+.6])
@@ -181,7 +183,7 @@ def save_time_correlations(f, subject, channel=None):
 
     vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
     vsmc_electrodes = np.zeros(256)
-    vsmc_electrodes[vsmc] = 1 
+    vsmc_electrodes[vsmc] = 1
 
     good_examples = np.nonzero(good_examples)[0].tolist()
 
@@ -207,7 +209,7 @@ def save_time_correlations(f, subject, channel=None):
     hb_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][3],
                               bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
     b_bands = np.logical_or(b_bands, hb_bands)
-    b_bands = range(10, 21) 
+    b_bands = range(10, 21)
 
     hg_ts = np.zeros((hg_bands.sum(), n_cv, n_ch, n_time))
     for ii, c in enumerate(np.nonzero(hg_bands)[0]):
@@ -283,9 +285,9 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
         yticks.append(0)
         ax0.set_yticks(yticks)
         ax0.set_yticklabels(yticklabels)
-        ax0.set_title('Electrode: {}'.format(channel), fontsize=10)
-        ax0.set_ylabel('Freq. (Hz)')
-        ax0.set_xlabel('Time (ms)')
+        ax0.set_title('Electrode: {}'.format(channel), fontsize=axes_label_fontsize)
+        ax0.set_ylabel('Freq. (Hz)', fontsize=axes_label_fontsize)
+        ax0.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
 
     if ax1 is not None:
         hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
@@ -312,12 +314,13 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
 
         ax1.plot(hg, c='r', lw=2)
         ax1.plot(b, c='k', lw=2)
-        ax1.set_ylabel('Normalized\nAmplitude')
-        ax1.set_xlabel('Time (ms)')
+        ax1.set_ylabel('Normalized\nAmplitude', fontsize=axes_label_fontsize)
+        ax1.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
         ax1.set_xlim([0, plot_idx[-1]])
     for ax in axes:
         ax.set_xticks([0, 100, plot_idx[-1]])
         ax.set_xticklabels([-500, 0, int(1000 * plot_time[-1])-500])
+        ax.tick_params(labelsize=ticklabel_fontsize)
     return im
 
 
@@ -343,8 +346,8 @@ def plot_correlations(subjects, ax, kind='freq'):
                     facecolor=c)
             ax.set_xlim(0, 40)
             ax.set_ylim(-.2, None)
-            ax.set_xlabel('Freq. (Hz)')
-            ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
+            ax.set_xlabel('Freq. (Hz)', fontsize=axes_label_fontsize)
+            ax.set_ylabel(r'H$\gamma$ Corr. Coef.', fontsize=axes_label_fontsize)
         elif kind == 'time':
             mean = xcorr_time.mean(axis=(1, 2))
             sem = xcorr_time.std(axis=(1, 2)) / np.sqrt(np.prod(xcorr_time.shape[1:]))
@@ -353,11 +356,12 @@ def plot_correlations(subjects, ax, kind='freq'):
             n_time = xcorr_time.shape[0]
             ax.set_xticks([0, n_time // 2, n_time])
             ax.set_xticklabels(int(1000 * (n_time // 2) * (1/200.)) * np.array([-1, 0, 1]))
-            ax.set_xlabel('Lag (ms)')
-            ax.set_ylabel(r'H$\gamma$-$\beta$ Corr. Coef.')
+            ax.set_xlabel('Lag (ms)', fontsize=axes_label_fontsize)
+            ax.set_ylabel(r'H$\gamma$-$\beta$ Corr. Coef.', fontsize=axes_label_fontsize)
         else:
             raise NotImplementedError
     ax.axhline(0, linestyle='--', c='gray', lw=1.)
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_time_correlations(subjects, ax):
@@ -379,11 +383,12 @@ def plot_time_correlations(subjects, ax):
                 facecolor=c)
         #ax.set_xlim(0, 40)
         #ax.set_ylim(-.2, None)
-        ax.set_xlabel('Time (ms)')
-        ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
+        ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
+        ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)', fontsize=axes_label_fontsize)
     ax.axhline(0, linestyle='--', c='gray', lw=1.)
     ax.set_xticks([0, 100, plot_idx[-1]])
     ax.set_xticklabels([-500, 0, int(1000 * plot_time[-1])-500])
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_correlation_histogram(subjects, ax, cs=None):
@@ -404,19 +409,21 @@ def plot_correlation_histogram(subjects, ax, cs=None):
         corr_data = np.ravel(xcorr_time[n_time // 2])
 
         pos = power_data >= 0
-        slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[pos], corr_data[pos])
+        x, y = power_data[pos], corr_data[pos]
+        slope, intercept, _, _, _ = stats.linregress(x, y)
         yp = 0
         xp = -intercept / slope
         cutoff = xp
 
         ax.hist(corr_data, bins=50, histtype='step', fill=False, color='k', lw=2)
-        ax.set_ylabel('Counts')
-        ax.set_xlabel(r'H$\gamma$-$\beta$ Correlation (R)')
+        ax.set_ylabel('Counts', fontsize=axes_label_fontsize)
+        ax.set_xlabel(r'H$\gamma$-$\beta$ Correlation (R)', fontsize=axes_label_fontsize)
         ax.axvline(0, ls='--', color='gray', lw=1)
 
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
                                                                             'cv_channels': power_data_not_flat >= cutoff})
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_power_histogram(subjects, ax, cs=None):
@@ -443,16 +450,18 @@ def plot_power_histogram(subjects, ax, cs=None):
         cutoff = xp
 
         ax.hist(power_data, bins=50, histtype='step', fill=False, color='k', lw=2)
-        ax.set_ylabel('Counts')
-        ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
+        ax.set_ylabel('Counts', fontsize=axes_label_fontsize)
+        ax.set_xlabel(r'Average H$\gamma$ Power (zscore)', fontsize=axes_label_fontsize)
         ax.axvline(xp, ls='--', color='gray', lw=1)
 
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
                                                                             'cv_channels': power_data_not_flat >= cutoff})
+    ax.tick_params(labelsize=ticklabel_fontsize)
 
 
 def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
+    print(subjects)
     if not isinstance(subjects, list):
         subjects = [subjects]
 
@@ -479,7 +488,26 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
         corr_data = np.ravel(xcorr_time[n_time // 2])
 
         pos = power_data >= 0
-        slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[pos], corr_data[pos])
+        x, y = power_data[pos], corr_data[pos]
+        print(x.shape, y.shape)
+        slope, intercept, _, _, _ = stats.linregress(x, y)
+        print(slope, intercept)
+        m = TheilSenRegressor().fit(x[:,np.newaxis], y)
+        slope = np.asscalar(m.coef_)
+        intercept = np.asscalar(m.intercept_)
+        print(slope, intercept)
+        m = RANSACRegressor().fit(x[:,np.newaxis], y).estimator_
+        slope = np.asscalar(m.coef_)
+        intercept = np.asscalar(m.intercept_)
+        print(slope, intercept)
+        m = HuberRegressor(epsilon=1.0).fit(x[:,np.newaxis], y)
+        slope = np.asscalar(m.coef_)
+        intercept = np.asscalar(m.intercept_)
+        print(slope, intercept)
+        m = LinearRegression().fit(x[:,np.newaxis], y)
+        slope = np.asscalar(m.coef_)
+        intercept = np.asscalar(m.intercept_)
+        print(slope, intercept)
         yp = 0
         xp = -intercept / slope
         cutoff = xp
@@ -535,8 +563,8 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
             y_center = (ymax + ymin) / 2.
             width = max(x_width, y_width)
 
-            ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
-            ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
+            ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)', fontsize=axes_label_fontsize)
+            ax.set_xlabel(r'Average H$\gamma$ Power (zscore)', fontsize=axes_label_fontsize)
             x = np.linspace(min(xs), max(xs), 2)
             y = slope * x + intercept
             ax.plot(x, y, '-', c=c, alpha=.5)
@@ -547,8 +575,8 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
             neg = power_data < 0
             ax.plot(x, y, 'r--')
             ax.scatter(power_data, corr_data, marker='.', c='k', alpha=.1)
-            ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)')
-            ax.set_xlabel(r'Average H$\gamma$ Power (z-score)')
+            ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation (R)', fontsize=axes_label_fontsize)
+            ax.set_xlabel(r'Average H$\gamma$ Power (zscore)', fontsize=axes_label_fontsize)
             slope, intercept, r_value, p_value, std_err = stats.linregress(power_data[neg], corr_data[neg])
             x = np.linspace(power_data.min(), 0, 1000)
             y = slope * x + intercept
@@ -573,6 +601,7 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
     ax.set_xlim(x_center - width / 2., x_center + width / 2.)
     ax.set_ylim(y_center - width / 2., y_center + width / 2.)
     ax.set_xticks([0, .75])
+    ax.tick_params(labelsize=ticklabel_fontsize)
     return return_cutoff_pct
 
 
@@ -597,35 +626,24 @@ def plot_resolved_power_correlations(subjects, ax):
         sem = xcorr_freq_high.std(axis=(1)) / np.sqrt(np.prod(xcorr_freq_high.shape[1]))
         mean = mean[idxs]
         sem = sem[idxs]
-        """
-        ax.plot(x, mean, '-', color=c, lw=.5)
-        ax.fill_between(x, mean-sem, mean+sem, alpha=1., edgecolor=c,
-                        facecolor='none', hatch='//', lw=.5)
-        ax.fill_between(x, mean-sem, mean+sem, alpha=.5, edgecolor='none',
-                        facecolor=c)
-        """
         c = subject_colors[subject]
         ax.plot(x, mean, '-', color=c, lw=1.)
         ax.fill_between(x, mean-sem, mean+sem, edgecolor=c,
                         facecolor=c, alpha=.3)
-        ax.set_xlabel('Freq. (Hz)')
-        ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
+        ax.set_xlabel('Freq. (Hz)', fontsize=axes_label_fontsize)
+        ax.set_ylabel(r'H$\gamma$ Corr. Coef.', fontsize=axes_label_fontsize)
 
         xcorr_freq_low = xcorr_freq[:, ~cv_channels]
         mean = xcorr_freq_low.mean(axis=(1))
         sem = xcorr_freq_low.std(axis=(1)) / np.sqrt(np.prod(xcorr_freq_low.shape[1]))
         mean = mean[idxs]
         sem = sem[idxs]
-        """
-        ax.plot(x, mean, color=c, lw=.5)
-        ax.fill_between(x, mean-sem, mean+sem, alpha=.5, edgecolor='none',
-                        facecolor=c)
-        """
         ax.plot(x, mean, '-', color=c, lw=1.)
         ax.fill_between(x, mean-sem, mean+sem, edgecolor=c,
                         facecolor=c, alpha=.3)
-    ax.set_xlabel('Freq. (Hz)')
-    ax.set_ylabel(r'H$\gamma$ Corr. Coef.')
+    ax.set_xlabel('Freq. (Hz)', fontsize=axes_label_fontsize)
+    ax.set_ylabel(r'H$\gamma$ Corr. Coef.', fontsize=axes_label_fontsize)
     ax.set_xlim(0, 40)
     ax.axhline(0, linestyle='--', c='gray', lw=.5)
     ax.axhline(.25, 15./40, 29./40, linestyle='-', c='gray', lw=2.)
+    ax.tick_params(labelsize=ticklabel_fontsize)

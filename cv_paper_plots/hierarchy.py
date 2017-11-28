@@ -5,7 +5,8 @@ import functools
 from scipy import cluster
 import matplotlib.pyplot as plt
 
-from .style import axes_label_fontsize, ticklabel_fontsize
+from .style import (subjects, subject_colors,
+                    axes_label_fontsize, ticklabel_fontsize)
 
 
 def create_dendrogram(features, labels, color_threshold=None,
@@ -183,10 +184,10 @@ def load_correlations(folder, files):
     for fname in files:
         path = os.path.join(folder, fname)
         data = load(path)
-        dp.extend(data[0])
-        dm.extend(data[1])
-        dv.extend(data[2])
-        dmjar.extend(data[3])
+        dp.append(data[0])
+        dm.append(data[1])
+        dv.append(data[2])
+        dmjar.append(data[3])
     return dp, dm, dv, dmjar
 
 def plot_correlations(dp, dm, dv, dmjar, ax):
@@ -203,8 +204,12 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
                   'medianprops': {'color': 'black', 'linewidth': 1},
                   'boxprops': {'color': 'black', 'linewidth': 1}}
 
-    data = [dv, dm, dp, dmjar]
+    data = [np.concatenate(x) for x in [dv, dm, dp, dmjar]]
     bp = ax.boxplot(data, **box_params)
     ax.set_xlim([-.06, .65])
     ax.set_xlabel('Correlation Coefficient', fontsize=axes_label_fontsize)
     ax.tick_params(labelsize=ticklabel_fontsize)
+    for ii, x in enumerate([dv, dm, dp, dmjar]):
+        for s, xs in zip(subjects, x):
+            plt.plot(np.median(xs), ii, 'o',
+                     markersize=4, c=subject_colors[s])

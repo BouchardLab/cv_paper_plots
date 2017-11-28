@@ -1,8 +1,9 @@
 import numpy as np
-from .style import subject_colors as colors, subject_labels as labels
+from .style import (subject_colors as colors,
+                    subject_labels as labels,
+                    ticklabel_fontsize,
+                    axes_label_fontsize)
 
-
-colors = subject_colors
 
 def plot_cv_accuracy(subjects, deep, linear, random, ax, task='CV task',
         legend=True, ymax=None):
@@ -51,8 +52,9 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='CV task',
     ax.set_xticklabels(['Linear', 'Deep'])
     ax.set_xlim(-.5, 1.5)
     ax.axhline(1, c='gray', linestyle='--', lw=1)
-    ax.set_ylabel('Accuracy/chance')
-    ax.set_xlabel(task)
+    ax.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
+    ax.set_xlabel(task, fontsize=axes_label_fontsize)
     ax.set_ylim([None, ymax])
     if ymax is not None and ymax < 3:
         ax.set_yticks([1, 2])
+    ax.tick_params(labelsize=ticklabel_fontsize)
