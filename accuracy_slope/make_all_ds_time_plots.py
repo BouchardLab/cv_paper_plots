@@ -6,12 +6,10 @@ import scipy as sp
 
 import matplotlib
 matplotlib.use('Agg')
-from pylab import rcParams
 import matplotlib.pyplot as plt
 
+from cv_paper_plots.style import axes_label_fontsize, ticklabel_fontsize
 
-rcParams.update({'figure.autolayout': True,
-                 'font.size': 12})
 
 folder = '/home/jesse/plots/ds/data'
 
@@ -28,7 +26,14 @@ c_all = []
 v_all = []
 
 x = np.arange(-100*5,158*5, 5)
-fig, ax = plt.subplots(1, figsize=(8, 4))
+fig = plt.figure(figsize=(2.5, 1.425))
+l_edge = .2
+r_edge = .05
+b_edge = .275
+t_edge = .05
+width = 1. - l_edge - r_edge
+height = 1. - b_edge - t_edge
+ax = fig.add_axes([l_edge, b_edge, width, height])
 legend = []
 
 for ii, (d, rd) in enumerate(zip(data, r_data)):
@@ -89,22 +94,22 @@ c_std = c_all.std(axis=0)
 v_mean = v_all.mean(axis=0)
 v_std = v_all.std(axis=0)
 
-c_label = 'Subj. avg. consonant'
-legend.append(ax.fill_between(x, c_mean-c_std/np.sqrt(n_data),
+c_label = 'Consonant'
+ax.fill_between(x, c_mean-c_std/np.sqrt(n_data),
                               c_mean+c_std/np.sqrt(n_data),
                  facecolor='black', edgecolor='black',
-                 label=c_label))
+                 label=c_label)
 
-v_label = 'Subj. avg. vowel'
-legend.append(ax.fill_between(x, v_mean-v_std/np.sqrt(n_data),
+v_label = 'Vowel'
+ax.fill_between(x, v_mean-v_std/np.sqrt(n_data),
                               v_mean+v_std/np.sqrt(n_data),
                  facecolor='red', edgecolor='red',
-                 label=v_label))
-legend.extend(plt.plot(x, np.ones_like(x), '-', color='gray', label='Chance'))
+                 label=v_label)
+plt.plot(x, np.ones_like(x), '-', color='gray', lw=1)
 
-ax.plot([0, 0], [.5, 5], '--', color='gray')
-ax.set_xlabel('Time (ms)')
-ax.set_ylabel('Accuracy/chance')
+ax.axvline(0, 1 ,0, linestyle='--', color='gray', lw=1)
+ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
+ax.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
 ax.set_xlim(x.min(),x.max())
 ax.set_xticks([x.min(),0, x.max()])
 ax.set_xticklabels([-500, 0, 800])
@@ -115,7 +120,6 @@ ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 ax.yaxis.set_ticks_position('left')
 ax.xaxis.set_ticks_position('bottom')
-fig.tight_layout()
-plt.legend(legend, [l.get_label() for l in legend], prop={'size': 12},
-           frameon=False)
-plt.savefig(os.path.join(os.environ['HOME'], '/Downloads/time_accuracy_all.pdf'))
+ax.tick_params(labelsize=ticklabel_fontsize)
+plt.savefig(os.path.join(os.environ['HOME'], 'Downloads/time_accuracy_all.pdf'))
+plt.savefig(os.path.join(os.environ['HOME'], 'Downloads/time_accuracy_all.png'), dpi=300)

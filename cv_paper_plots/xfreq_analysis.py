@@ -287,7 +287,7 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
         ax0.set_yticklabels(yticklabels)
         ax0.set_title('Electrode: {}'.format(channel), fontsize=axes_label_fontsize)
         ax0.set_ylabel('Freq. (Hz)', fontsize=axes_label_fontsize)
-        ax0.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
+        #ax0.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
 
     if ax1 is not None:
         hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
@@ -645,5 +645,5 @@ def plot_resolved_power_correlations(subjects, ax):
     ax.set_ylabel(r'H$\gamma$ Corr. Coef.', fontsize=axes_label_fontsize)
     ax.set_xlim(0, 40)
     ax.axhline(0, linestyle='--', c='gray', lw=.5)
-    ax.axhline(.25, 15./40, 29./40, linestyle='-', c='gray', lw=2.)
+    ax.axhline(.2, 15./40, 29./40, linestyle='-', c='gray', lw=2.)
     ax.tick_params(labelsize=ticklabel_fontsize)

@@ -50,7 +50,7 @@ def plot_electrodes_by_time(data, ax):
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-    ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.axvline(0, 0, 1, linestyle='--', c='black', lw=1)
     ax.tick_params(labelsize=ticklabel_fontsize)
 
 
@@ -67,7 +67,7 @@ def plot_40bands_by_time(data, band_idxs, sl, rate, block_path, ax):
     x = np.linspace(-500, 800, ht.shape[1])
     for ii in range(n_idxs):
         y = ht[ii] / 2
-        ax.plot(x, y + ii, c=cs[ii], lw=1)
+        ax.plot(x, y + ii, c=cs[ii], lw=1.5)
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks(np.arange(n_idxs)[::3])
     ax.set_yticklabels(cfs.astype(int)[band_idxs][::3])
@@ -77,7 +77,7 @@ def plot_40bands_by_time(data, band_idxs, sl, rate, block_path, ax):
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-    ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.axvline(0, 0, 1, linestyle='--', c='black', lw=1)
     ax.tick_params(labelsize=ticklabel_fontsize)
 
 
@@ -94,7 +94,7 @@ def plot_40bandsAA_by_time(data, band_idxs, sl, rate, block_path, ax):
     x = np.linspace(-500, 800, ht.shape[1])
     for ii in range(n_idxs):
         y = ht[ii] / 2
-        ax.plot(x, y + ii, c=cs[ii], lw=3)
+        ax.plot(x, y + ii, c=cs[ii], lw=1.5)
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks(np.arange(n_idxs)[::3])
     ax.set_yticklabels(cfs.astype(int)[band_idxs][::3])
@@ -104,7 +104,7 @@ def plot_40bandsAA_by_time(data, band_idxs, sl, rate, block_path, ax):
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-    ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.axvline(0, 0, 1, linestyle='--', c='black', lw=1)
     ax.tick_params(labelsize=ticklabel_fontsize)
 
 
@@ -120,17 +120,17 @@ def plot_neurobands_by_time(data, sl, rate, block_path, ax):
         ht, m, s = zscore(ht, mode='file', sampling_freq=400., block_path=block_path)
         ht = ht[:, sl].mean(axis=0) / 2
         x = np.linspace(-500, 800, ht.size)
-        ax.plot(x, ht + ii, c=cs[ii], lw=3)
+        ax.plot(x, ht + ii, c=cs[ii], lw=1.5)
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks(np.arange(n_bands))
-    ax.set_yticklabels([r'$\theta$', r'$\alpha$', r'low $\beta$', r'high $\beta$', r'$\gamma$', r'high $\gamma$'])
+    ax.set_yticklabels([r'$\theta$', r'$\alpha$', r'L$\beta$', r'H$\beta$', r'$\gamma$', r'H$\gamma$'])
     ax.set_ylabel('Frequency band', fontsize=axes_label_fontsize)
     ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-    ax.axvline(0, 0, 1, linestyle='--', c='black')
+    ax.axvline(0, 0, 1, linestyle='--', c='black', lw=1)
     ax.tick_params(labelsize=ticklabel_fontsize)
 
 
@@ -150,20 +150,20 @@ def plot_datapoints(data, slices, rate, block_path, axes):
         x = np.linspace(-500, 800, all_y.shape[-1])
         for jj in range(n_elects):
             y = all_y[jj]
-            ax.plot(x, y + jj, c=cs[jj], lw=3)
+            ax.plot(x, y + jj, c=cs[jj], lw=1.5)
         ax.set_xticks([-500, 0, 800])
         ax.set_yticks([])
         ax.set_yticklabels([])
         ax.get_xaxis().tick_bottom()
         ax.get_yaxis().tick_left()
         if ii == 0:
-            ax.set_ylabel(r'Electrodes high $\gamma$')
+            ax.set_ylabel(r'Electrodes H$\gamma$')
         if ii == (len(slices)-1):
             ax.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
             ax.set_xticks([-500, 0, 800])
         else:
             ax.set_xticks([])
-        ax.axvline(0, 0, 1, linestyle='--', c='black')
+        ax.axvline(0, 0, 1, linestyle='--', c='black', lw=1)
     ax.tick_params(labelsize=ticklabel_fontsize)
 
 

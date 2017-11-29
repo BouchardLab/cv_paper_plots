@@ -30,7 +30,7 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
         ym = y.mean(axis=-1)
         yerr = y.std(axis=-1) / np.sqrt(n_iter)
         ax0.errorbar(x, ym, yerr=yerr,
-                    c=colors[s], label=labels[s], lw=lw)
+                    c=colors[s], label=labels[s].replace('ect', '.'), lw=lw)
 
         x = np.array(keys) + .004 * (jj - 1.5) + .002
         y = accuracies[0, jj] / accuracies[2, jj]
@@ -54,7 +54,7 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
 
     ax0.set_xlim(.45, 1.05)
     if legend:
-        ax0.legend(loc='best')
+        ax0.legend(loc='best', ncol=2)
     ax0.axhline(1, c='gray', linestyle='--', lw=1)
     ax0.set_xlabel('Training dataset fraction', fontsize=axes_label_fontsize)
     ax0.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
