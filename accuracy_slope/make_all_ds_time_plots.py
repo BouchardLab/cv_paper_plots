@@ -34,7 +34,6 @@ t_edge = .05
 width = 1. - l_edge - r_edge
 height = 1. - b_edge - t_edge
 ax = fig.add_axes([l_edge, b_edge, width, height])
-legend = []
 
 for ii, (d, rd) in enumerate(zip(data, r_data)):
 
@@ -103,7 +102,7 @@ ax.fill_between(x, c_mean-c_std/np.sqrt(n_data),
 v_label = 'Vowel'
 ax.fill_between(x, v_mean-v_std/np.sqrt(n_data),
                               v_mean+v_std/np.sqrt(n_data),
-                 facecolor='red', edgecolor='red',
+                 facecolor='gray', edgecolor='gray',
                  label=v_label)
 plt.plot(x, np.ones_like(x), '-', color='gray', lw=1)
 
@@ -121,5 +120,6 @@ ax.spines['top'].set_visible(False)
 ax.yaxis.set_ticks_position('left')
 ax.xaxis.set_ticks_position('bottom')
 ax.tick_params(labelsize=ticklabel_fontsize)
+ax.legend(loc='best', borderaxespad=0, prop={'size': ticklabel_fontsize})
 plt.savefig(os.path.join(os.environ['HOME'], 'Downloads/time_accuracy_all.pdf'))
 plt.savefig(os.path.join(os.environ['HOME'], 'Downloads/time_accuracy_all.png'), dpi=300)

@@ -5,7 +5,7 @@ from .style import (subject_colors as colors,
                     axes_label_fontsize)
 
 
-def plot_cv_accuracy(subjects, deep, linear, random, ax, task='CV task',
+def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel',
         legend=True, ymax=None):
     lw = 2
     n_subjects, _, n_iter = deep.shape
@@ -53,8 +53,12 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='CV task',
     ax.set_xlim(-.5, 1.5)
     ax.axhline(1, c='gray', linestyle='--', lw=1)
     ax.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
-    ax.set_xlabel(task, fontsize=axes_label_fontsize)
+    ax.set_title(task, fontsize=axes_label_fontsize)
     ax.set_ylim([None, ymax])
     if ymax is not None and ymax < 3:
         ax.set_yticks([1, 2])
+    elif ymax is not None and ymax < 10:
+        ax.set_yticks([1, 5, 9])
+    else:
+        ax.set_yticks([1, 5, 10, 15, 20])
     ax.tick_params(labelsize=ticklabel_fontsize)

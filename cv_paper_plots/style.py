@@ -1,6 +1,6 @@
 subjects = ['ec2', 'ec9', 'gp31', 'gp33']
 subject_colors = {'ec2': 'red',
-                  'ec9': 'pink',
+                  'ec9': 'salmon',
                   'gp31': 'gray',
                   'gp33': 'black'}
 subject_labels = {'ec2': 'Subject 1',

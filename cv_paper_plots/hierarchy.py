@@ -5,7 +5,7 @@ import functools
 from scipy import cluster
 import matplotlib.pyplot as plt
 
-from .style import (subjects, subject_colors,
+from .style import (subjects, subject_labels, subject_colors,
                     axes_label_fontsize, ticklabel_fontsize)
 
 
@@ -71,7 +71,8 @@ def plot_distance_vs_clusters(z, threshold, max_d, ax):
     ax.set_yticks([])
     ax.set_ylim(None, max_d)
     ax.tick_params(labelsize=ticklabel_fontsize)
-    ax.set_xlabel('Num. Clusters', fontsize=axes_label_fontsize)
+    ax.set_xlabel('# Clusters', fontsize=axes_label_fontsize)
+    ax.set_ylabel('Distance', fontsize=axes_label_fontsize)
 
 
 def plot_cv_accuracy(cv_accuracy, ax):
@@ -90,9 +91,9 @@ def plot_soft_confusion(yhs, r, f, ax, cax):
     im = ax.imshow(yhs, cmap='gray_r', interpolation='nearest',
             vmin=0, vmax=yhs.max())
     ax.set_xticks(np.linspace(0, 56, 57))
-    ax.set_xticklabels(r['ivl'], rotation='vertical', fontsize=6)
+    ax.set_xticklabels(r['ivl'])
     ax.set_yticks(np.linspace(0, 56, 57))
-    ax.set_yticklabels(r['ivl'], fontsize=6)
+    ax.set_yticklabels(r['ivl'])
     ax.set_ylabel('Target CV', fontsize=axes_label_fontsize)
     ax.set_xlabel('Predicted CV', fontsize=axes_label_fontsize)
     ax.xaxis.tick_top()
@@ -105,8 +106,8 @@ def plot_soft_confusion(yhs, r, f, ax, cax):
         label.set_position([tick_scale*(((pos+1)%2)-.5)-tick_offset, 1])
         pos += 1
 
-    tick_offset = -.02
-    tick_scale = -.05
+    tick_offset = -.01
+    tick_scale = -.03
     pos = 0
     for label in ax.xaxis.get_majorticklabels():
         label.set_position([0, 1+tick_scale*(((pos+1)%2)-.5)-tick_offset])
@@ -120,7 +121,7 @@ def plot_soft_confusion(yhs, r, f, ax, cax):
 
 def load_predictions(folder, files):
     consonants = ['b', 'd', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'r',
-                  's', r'$\int$', 't', r'$\theta$', 'v', 'w', 'y', 'z']
+                  's', r'$\int$', 't', r'$\theta$', 'v', 'w', 'j', 'z']
     vowels = ['a', 'i', 'u']
 
     cvs = []
@@ -211,5 +212,10 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
     ax.tick_params(labelsize=ticklabel_fontsize)
     for ii, x in enumerate([dv, dm, dp, dmjar]):
         for s, xs in zip(subjects, x):
+            if ii == 0:
+                label = subject_labels[s]
+            else:
+                label = None
             plt.plot(np.median(xs), ii, 'o',
-                     markersize=4, c=subject_colors[s])
+                     markersize=4, c=subject_colors[s], label=label)
+    ax.legend(loc='best', ncol=2, prop={'size': ticklabel_fontsize})

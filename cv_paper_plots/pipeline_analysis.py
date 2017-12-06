@@ -37,7 +37,7 @@ def plot_electrodes_by_time(data, ax):
     x = np.linspace(-500, 800, n_time)
     for ii in range(n_elec):
         y = data[ii] / 3
-        ax.plot(x, y + ii, c=cs[ii], lw=1.5)
+        ax.plot(x, y + ii, c=cs[ii], lw=.5)
     ax.set_xticks([-500, 0, 800])
     ax.set_yticks([])
     ax.set_yticklabels([None])
@@ -170,17 +170,17 @@ def plot_datapoints(data, slices, rate, block_path, axes):
 def plot_network(n_nodes, n_layers, ax):
     xs = np.linspace(.1, .9, n_layers)
     ys = np.linspace(.1, .9, n_nodes)
-    r = min((.9 - .1) / (2 * n_nodes), (.9 - .1) / (2 * n_layers))
+    r = min((.9 - .15) / (2 * n_nodes), (.9 - .15) / (2 * n_layers))
     alpha = .3
     for y1 in ys:
         for y2 in ys:
             if abs(y2 - y1) < .5:
                 for ii, x1 in enumerate(xs[:-1]):
                     x2 = xs[ii + 1]
-                    ax.plot([x1 + r, x2 - r], [y1, y2], 'k', alpha=alpha)
+                    ax.plot([x1 + r, x2 - r], [y1, y2], 'k', alpha=alpha,lw=.5)
     for y in np.linspace(.1, .9, n_nodes):
         for x in xs:
-            ax.add_artist(Circle((x , y), r, fill=False))
+            ax.add_artist(Circle((x , y), r, fill=False, lw=.5))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis('off')
