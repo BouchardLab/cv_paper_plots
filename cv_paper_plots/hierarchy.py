@@ -51,7 +51,7 @@ def plot_dendrogram(yhs, threshold, cvs, max_d, ax):
 
     z, r = create_dendrogram(yhs, cvs, threshold, ax=ax)
     ax.set_xticks([])
-    ax.set_ylabel('Distance', fontsize=axes_label_fontsize)
+    ax.set_ylabel('Distance', fontsize=axes_label_fontsize, labelpad=0)
     ax.set_ylim(None, max_d)
     ax.set_yticks([0, max_d])
     ax.set_yticklabels([0, max_d])
@@ -67,12 +67,14 @@ def plot_distance_vs_clusters(z, threshold, max_d, ax):
     cs = np.cumsum(h[::-1])[::-1]
     ax.set_ylim(None, max_d)
     ax.plot(cs, b[1:], c='k')
-    ax.set_xticks([])
-    ax.set_yticks([])
+    #ax.set_xticks([])
+    #ax.set_yticks([])
+    ax.set_yticks([0, max_d])
+    ax.set_yticklabels([0, max_d])
     ax.set_ylim(None, max_d)
     ax.tick_params(labelsize=ticklabel_fontsize)
-    ax.set_xlabel('# Clusters', fontsize=axes_label_fontsize)
-    ax.set_ylabel('Distance', fontsize=axes_label_fontsize)
+    ax.set_xlabel('# Clusters', fontsize=axes_label_fontsize, labelpad=0)
+    ax.set_ylabel('Distance', fontsize=axes_label_fontsize, labelpad=-10)
 
 
 def plot_cv_accuracy(cv_accuracy, ax):
@@ -84,7 +86,7 @@ def plot_cv_accuracy(cv_accuracy, ax):
     ax.set_xticks([0, .5])
     ax.set_xticklabels([0, .5])
     ax.tick_params(labelsize=ticklabel_fontsize)
-    ax.set_xlabel('Accuracy', fontsize=axes_label_fontsize)
+    ax.set_xlabel('Accuracy', fontsize=axes_label_fontsize, labelpad=0)
 
 
 def plot_soft_confusion(yhs, r, f, ax, cax):
@@ -198,9 +200,9 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
                   'vert': False,
                   'whis': 0,
                   'labels': ('Vowel',
-                             'Manner',
-                             'Place',
-                             'Maj. Art.'),
+                             'Constriction\nDegree',
+                             'Constriction\nLocation',
+                             'Major\nArticulator'),
                   'positions': [0, 1, 2, 3],
                   'medianprops': {'color': 'black', 'linewidth': 1},
                   'boxprops': {'color': 'black', 'linewidth': 1}}
@@ -218,4 +220,4 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
                 label = None
             plt.plot(np.median(xs), ii, 'o',
                      markersize=4, c=subject_colors[s], label=label)
-    ax.legend(loc='best', ncol=2, prop={'size': ticklabel_fontsize})
+    ax.legend(loc='lower right', ncol=2, prop={'size': ticklabel_fontsize})
