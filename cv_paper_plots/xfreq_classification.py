@@ -57,8 +57,8 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
     ax1.set_ylabel(r'$\Delta$ % Accuracy', fontsize=axes_label_fontsize)
     ax1.set_ylabel(r'$\Delta$ Accuracy/HG', fontsize=axes_label_fontsize)
     ax1.set_ylabel(r'$\Delta$ Accuracy/chance', fontsize=axes_label_fontsize)
-    ax0.plot([-10, 10], [1, 1], '--', c='blue', lw=.5)
-    ax1.plot([-10, 10], [0, 0], '--', c='blue', lw=.5)
+    ax0.plot([-10, 10], [1, 1], '--', c='steelblue', lw=.5)
+    ax1.plot([-10, 10], [0, 0], '--', c='steelblue', lw=.5)
     ax1.legend(loc='lower left', fontsize=ticklabel_fontsize, ncol=2)
 
 def plot_correlation_vs_accuracy(subjects, band_abbreviations, bands,
@@ -112,8 +112,8 @@ def plot_correlation_vs_accuracy(subjects, band_abbreviations, bands,
     ax1.set_ylabel(r'$\Delta$ Accuracy/HG', fontsize=axes_label_fontsize)
     ax1.set_ylabel(r'$\Delta$ Accuracy/chance', fontsize=axes_label_fontsize)
     ax0.set_yticks([1, 2, 3])
-    ax0.axhline(1, linestyle='--', c='blue', lw=.5)
-    ax1.axhline(0, linestyle='--', c='blue', lw=.5)
+    ax0.axhline(1, linestyle='--', c='steelblue', lw=.5)
+    ax1.axhline(0, linestyle='--', c='steelblue', lw=.5)
     for ax in axes:
         ax.set_xlabel(r'H$\gamma$ Corr. Coef.', fontsize=axes_label_fontsize)
         ax.tick_params(labelsize=ticklabel_fontsize)

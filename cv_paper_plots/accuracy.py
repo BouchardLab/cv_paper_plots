@@ -49,9 +49,9 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
     if legend:
         ax.legend(loc='best')
     ax.set_xticks([0, 1])
-    ax.set_xticklabels(['Linear', 'Deep'])
+    ax.set_xticklabels(['Logistic', 'Deep'])
     ax.set_xlim(-.5, 1.5)
-    ax.axhline(1, c='gray', linestyle='--', lw=1)
+    ax.axhline(1, c='steelblue', linestyle='--', lw=1)
     ax.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
     ax.set_title(task, fontsize=axes_label_fontsize)
     ax.set_ylim([None, ymax])

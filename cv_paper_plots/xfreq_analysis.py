@@ -370,7 +370,7 @@ def plot_correlations(subjects, ax, kind='freq'):
               prop={'size': ticklabel_fontsize},
               labelspacing=.2, columnspacing=.6,
               handlelength=.4, handletextpad=.4)
-    ax.axhline(0, linestyle='--', c='blue', lw=1.)
+    ax.axhline(0, linestyle='--', c='steelblue', lw=1.)
     ax.tick_params(labelsize=ticklabel_fontsize)
 
 

@@ -55,7 +55,7 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
     ax0.set_xlim(.45, 1.05)
     if legend:
         ax0.legend(loc='best', ncol=2, fontsize=ticklabel_fontsize)
-    ax0.axhline(1, c='gray', linestyle='--', lw=1)
+    ax0.axhline(1, c='steelblue', linestyle='--', lw=1)
     ax0.set_xlabel('Training dataset fraction', fontsize=axes_label_fontsize)
     ax0.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
     ax0.set_yticks([1, 5, 10, 15, 20])
@@ -68,9 +68,9 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
         ax1.errorbar(x, ym, yerr=yerr,
                      c=colors[s], lw=lw)
     ax1.set_xticks([0, 1])
-    ax1.set_xticklabels(['Linear', 'Deep'])
+    ax1.set_xticklabels(['Logistic', 'Deep'])
     ax1.set_xlim(-.5, 1.5)
-    ax1.axhline(0, c='gray', linestyle='--', lw=1)
+    ax1.axhline(0, c='steelblue', linestyle='--', lw=1)
     ax1.set_title('Consonant\nVowel', fontsize=axes_label_fontsize)
     ax1.set_ylabel(r'$\Delta$ Accuracy/chance per 1k training examples',
                    fontsize=axes_label_fontsize)
