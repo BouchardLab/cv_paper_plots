@@ -1,10 +1,12 @@
 import numpy as np
 from scipy.stats import linregress
+from scipy.stats import wilcoxon
 
 from .style import (subject_colors as colors,
                     subject_labels as labels,
                     ticklabel_fontsize,
                     axes_label_fontsize)
+from .stats import permute_paired_diffs
 
 def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
                   legend=False):
@@ -63,10 +65,23 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
     for ii, s in enumerate(subjects):
         x = np.array([0, 1]) + .05 * (ii - 1.5)
         y = slopes[:, ii]
+        p = wilcoxon(y[0], y[1])[1] * 4
+        print('{}: p={}'.format(labels[s], p))
+        p = permute_paired_diffs(y[0], y[1])[2] * 4
+        print('{}: p={}'.format(labels[s], p))
         ym = y.mean(axis=-1)
         yerr = y.std(axis=-1) / np.sqrt(n_iter)
         ax1.errorbar(x, ym, yerr=yerr,
                      c=colors[s], lw=lw)
+        if p < .001:
+            ax1.text(x[1] + .1, ym[1], '⁎⁎⁎', color=colors[s])
+        elif p < .01:
+            ax1.text(x[1] + .1, ym[1], '⁎⁎', color=colors[s])
+        elif p < .05:
+            ax1.text(x[1] + .1, ym[1], '⁎', color=colors[s])
+    p = wilcoxon(slopes[0].ravel(), slopes[1].ravel())[1] * 5
+    print('all subjects: p={}'.format(p))
+
     ax1.set_xticks([0, 1])
     ax1.set_xticklabels(['Logistic', 'Deep'])
     ax1.set_xlim(-.5, 1.5)
@@ -74,7 +89,6 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
     ax1.set_title('Consonant\nVowel', fontsize=axes_label_fontsize)
     ax1.set_ylabel(r'$\Delta$ Accuracy/chance per 1k training examples',
                    fontsize=axes_label_fontsize)
-    print(slopes.shape)
     print(('Deep networks scale better with dataset size than logistic regresion ' +
            'with an improvement of {} $\pm$ {}  and {} $\pm$ {} ' +
            'over chance per 1000 training samples respectively. This improvement ' +

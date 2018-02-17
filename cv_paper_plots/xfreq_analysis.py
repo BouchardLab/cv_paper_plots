@@ -659,9 +659,9 @@ def plot_resolved_power_correlations(subjects, ax, hline_c='gray'):
         ymin = min(mean.min(), ymin)
         ymax = max(mean.max(), ymax)
         c = subject_colors[subject]
-        ax.plot(x, mean, '-', color=c, lw=1.)
+        ax.plot(x, mean, '-', color='white', lw=.5)
         ax.fill_between(x, mean-sem, mean+sem, edgecolor=c,
-                        facecolor=c, alpha=.3)
+                        facecolor=c, alpha=.6)
         ax.set_xlabel('Freq. (Hz)', fontsize=axes_label_fontsize)
         ax.set_ylabel(r'H$\gamma$ Correlation.', fontsize=axes_label_fontsize)
 
@@ -672,9 +672,9 @@ def plot_resolved_power_correlations(subjects, ax, hline_c='gray'):
         sem = sem[idxs]
         ymin = min(mean.min(), ymin)
         ymax = max(mean.max(), ymax)
-        ax.plot(x, mean, '-', color=c, lw=1.)
+        ax.plot(x, mean, '-', color=c, lw=.6)
         ax.fill_between(x, mean-sem, mean+sem, edgecolor=c,
-                        facecolor=c, alpha=.3)
+                        facecolor=c, alpha=1.)
     ax.set_xlabel('Freq. (Hz)', fontsize=axes_label_fontsize)
     ax.set_ylabel(r'H$\gamma$ Correlation.', fontsize=axes_label_fontsize)
     ax.set_xlim(0, 60)

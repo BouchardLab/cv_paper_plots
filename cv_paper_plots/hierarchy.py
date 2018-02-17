@@ -4,6 +4,7 @@ import functools
 
 from scipy import cluster
 import matplotlib.pyplot as plt
+from scipy.stats import ranksums, ttest_1samp
 
 from .style import (subjects, subject_labels, subject_colors,
                     axes_label_fontsize, ticklabel_fontsize)
@@ -208,6 +209,10 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
                   'boxprops': {'color': 'black', 'linewidth': 1}}
 
     data = [np.concatenate(x) for x in [dv, dm, dp, dmjar]]
+    print(ranksums(np.concatenate(dmjar), np.concatenate(dp)))
+    print(ranksums(np.concatenate(dp), np.concatenate(dm)))
+    print(ranksums(np.concatenate(dmjar), np.concatenate(dm)))
+    print(ttest_1samp(np.concatenate(dv), 0))
     bp = ax.boxplot(data, **box_params)
     ax.set_xlim([-.06, .65])
     ax.set_xlabel('Correlation Coefficient', fontsize=axes_label_fontsize)
