@@ -8,11 +8,11 @@ from .stats import permute_paired_diffs
 
 
 def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel',
-        legend=True, ymax=None):
+        legend=True, ymax=None, show_significance=False):
     lw = 2
     n_subjects, _, n_iter = deep.shape
     data = np.zeros((3, n_subjects, n_iter))
-    random = random.mean(axis=(1, 2))
+    random = random.mean(axis=-1)
     for ii in range(n_subjects):
         data[0, ii] = linear[ii, 2]
         data[1, ii] = deep[ii, 2]
@@ -21,22 +21,25 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
     for ii, s in enumerate(subjects):
         x = np.array([0, 1]) + .05 * (ii-1.5)
         y = data[:2, ii] / data[2, ii][np.newaxis,...]
-        p = wilcoxon(y[0], y[1])[1] * 4
-        p0 = wilcoxon(data[0, ii], data[2, ii])[1] * 4
-        p1 = wilcoxon(data[1, ii], data[2, ii])[1] * 4
+        p = wilcoxon(y[0], y[1])[1]
+        p0 = wilcoxon(data[0, ii], data[2, ii])[1]
+        p1 = wilcoxon(data[1, ii], data[2, ii])[1]
         print('{}: p={}, {}, {}'.format(labels[s], p, p0, p1))
-        p = permute_paired_diffs(y[0], y[1])[2] * 4
-        print('{}: p={}'.format(s, p))
+        p = permute_paired_diffs(y[0], y[1])[2]
+        print('{}: p={}'.format(labels[s], p))
         ym = np.mean(y, axis=-1)
         yerr = np.std(y, axis=-1) / np.sqrt(n_iter)
         ax.errorbar(x, ym, yerr=yerr,
                     c=colors[s], label=labels[s].replace('ect', '.'), lw=lw)
-        if p < .001:
-            ax.text(x[1] + .1, ym[1], '⁎⁎⁎', color=colors[s])
-        elif p < .01:
-            ax.text(x[1] + .1, ym[1], '⁎⁎', color=colors[s])
-        elif p < .05:
-            ax.text(x[1] + .1, ym[1], '⁎', color=colors[s])
+        if show_significance:
+            if p < .001:
+                ax.text(x[1] + .1, ym[1], '⁎⁎⁎', color=colors[s])
+            elif p < .01:
+                ax.text(x[1] + .1, ym[1], '⁎⁎', color=colors[s])
+            elif p < .05:
+                ax.text(x[1] + .1, ym[1], '⁎', color=colors[s])
+            else:
+                ax.text(x[1] + .1, ym[1], 'n.s.', color=colors[s])
     p = wilcoxon(data[0].ravel(), data[1].ravel())[1] * 5
     print('all subject: p={}'.format(p))
 
@@ -47,7 +50,7 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
           '({} times chance, {}\%) and {}$\pm$ {}\% ({} times chance, ' +
           '{}\%) for logistic regression and deep networks ' +
           'respectively, which is a {}\% ' +
-          'improvement. ' + 
+          'improvement. ' +
           'Mean {} classification accuracy across subjects (XX way) ' +
           'with deep networks is {} $\pm$ {}\%. For logistic regression, ' +
           'it is {} $\pm$ {}\%.').format(

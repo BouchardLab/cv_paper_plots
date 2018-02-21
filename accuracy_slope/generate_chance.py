@@ -8,7 +8,7 @@ rng = np.random.RandomState(20170801)
 subjects = ['ec2', 'ec9', 'gp31', 'gp33']
 fracs = [.5, .6, .7, .8, .9, 1.]
 folds = list(range(10))
-n_trials = 10
+n_trials = 100
 
 chance_data = np.zeros((5, len(subjects), len(fracs), len(folds), n_trials))
 training_size = np.zeros((len(subjects), len(fracs), len(folds)))
