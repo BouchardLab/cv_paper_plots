@@ -4,7 +4,7 @@ import functools
 
 from scipy import cluster
 import matplotlib.pyplot as plt
-from scipy.stats import ranksums, ttest_1samp
+from scipy.stats import wilcoxon, ranksums, ttest_1samp
 
 from .style import (subjects, subject_labels, subject_colors,
                     axes_label_fontsize, ticklabel_fontsize)
@@ -209,12 +209,26 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
                   'boxprops': {'color': 'black', 'linewidth': 1}}
 
     data = [np.concatenate(x) for x in [dv, dm, dp, dmjar]]
-    print(ranksums(np.concatenate(dmjar), np.concatenate(dp)))
-    print(ranksums(np.concatenate(dp), np.concatenate(dm)))
-    print(ranksums(np.concatenate(dmjar), np.concatenate(dm)))
-    print(ttest_1samp(np.concatenate(dv), 0))
+
+    def draw_sig(ax, x, y0, y1, n_stars):
+        fraction = .2 / (y1 - y0)
+        ax.annotate("", xy=(x, y0), xycoords='data',
+        xytext=(x, y1), textcoords='data',
+        arrowprops=dict(arrowstyle="-", ec='k',
+        connectionstyle="bar,fraction={}".format(fraction)))
+        ax.text(x-.0325, .5 * (y0 + y1), n_stars*'⁎', fontsize=axes_label_fontsize,
+                verticalalignment='center')
+
+    if wilcoxon(np.concatenate(dmjar), np.concatenate(dp))[1] * 4 < 1e-10:
+        draw_sig(ax, .15, 2, 3, 2)
+    if wilcoxon(np.concatenate(dp), np.concatenate(dm))[1] * 4 < 1e-10:
+        draw_sig(ax, -.03, 1, 2, 2)
+    if wilcoxon(np.concatenate(dmjar), np.concatenate(dm))[1] * 4 < 1e-10:
+        draw_sig(ax, -.06, 1, 3, 2)
+    if ttest_1samp(np.concatenate(dv), 0)[1] * 4 < 1e-4:
+        ax.text(-.07, 0, '⁎', fontsize=axes_label_fontsize, verticalalignment='center')
     bp = ax.boxplot(data, **box_params)
-    ax.set_xlim([-.06, .65])
+    ax.set_xlim([-.1, .65])
     ax.set_xlabel('Correlation Coefficient', fontsize=axes_label_fontsize)
     ax.tick_params(labelsize=ticklabel_fontsize)
     for ii, x in enumerate([dv, dm, dp, dmjar]):

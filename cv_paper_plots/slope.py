@@ -68,7 +68,7 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
         y = accuracies[1, jj] / accuracies[2, jj]
         slope1, intercept1, r_value1, p_value1, std_err1 = linregress(x.ravel(), y.ravel())
         print(slope1, r_value1, p_value1, std_err1)
-        p = parametric_slopes_test(slope0, std_err0, x.size, slope1, std_err1, x.size)
+        p = parametric_slopes_test(slope0, std_err0, x.size, slope1, std_err1, x.size) * 4
         slopes[0, jj] = slope0, std_err0, p
         slopes[1, jj] = slope1, std_err1, p
         print()
@@ -88,15 +88,17 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
         p = slopes[1, ii, 2]
         ax1.errorbar(x, ym, yerr=yerr,
                      c=colors[s], lw=lw)
-        print(p * 4)
+        print(p)
         if p < .001:
-            ax1.text(x[1] + .1, ym[1], '⁎⁎⁎', color=colors[s])
+            ax1.text(x[1] + .05, ym[1], '⁎⁎', color=colors[s], fontsize=axes_label_fontsize)
+            """
         elif p < .01:
-            ax1.text(x[1] + .1, ym[1], '⁎⁎', color=colors[s])
+            ax1.text(x[1] + .05, ym[1], '⁎⁎', color=colors[s], fontsize=axes_label_fontsize)
+            """
         elif p < .05:
-            ax1.text(x[1] + .1, ym[1], '⁎', color=colors[s])
+            ax1.text(x[1] + .05, ym[1], '⁎', color=colors[s], fontsize=axes_label_fontsize)
         else:
-            ax1.text(x[1] + .1, ym[1], 'n.s.', color=colors[s])
+            ax1.text(x[1] + .05, ym[1], 'n.s.', color=colors[s], fontsize=axes_label_fontsize)
 
     ax1.set_xticks([0, 1])
     ax1.set_xticklabels(['Logistic', 'Deep'])

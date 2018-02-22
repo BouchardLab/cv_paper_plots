@@ -477,7 +477,6 @@ def plot_power_histogram(subjects, ax, cs=None):
 
 
 def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
-    print(subjects)
     if not isinstance(subjects, list):
         subjects = [subjects]
 
@@ -525,7 +524,12 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None):
         m = LinearRegression().fit(x[:,np.newaxis], y)
         slope = np.asscalar(m.coef_)
         intercept = np.asscalar(m.intercept_)
-        print(slope, intercept)
+        slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y)
+        print(('{}, \tm: {:0.2e}, \tb: {:0.2e}, \tR^2: {:0.2e}, ' +
+               '\tp: {:0.2e}, \tstderr: {:0.2e}').format(subject, slope,
+                                                         intercept,
+                                                         rvalue**2,
+                                                         pvalue, stderr))
         yp = 0
         xp = -intercept / slope
         cutoff = xp

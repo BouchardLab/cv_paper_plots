@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from scipy.stats import wilcoxon
 
 from ecog.utils.bands import neuro, chang_lab
 
@@ -10,6 +11,20 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
                               single_accuracy, multi_accuracy, chance, axes):
     ax0, ax1 = axes
     for ii, ba in enumerate(band_abbreviations):
+        y = single_accuracy[ba][:, 2]
+        ch = chance
+        pA = wilcoxon(y.ravel(), ch.ravel())[1] * 5
+        print('{}, pA: {:0.2e}'.format(ba, pA))
+        y = multi_accuracy[ba][:, 2] / chance
+        y_hg = single_accuracy['hg'][:, 2] / chance
+        pB = wilcoxon(y.ravel(), y_hg.ravel())[1] * 5
+        print('{}, pB: {:0.2e}\n'.format(ba, pB))
+        if pA < 1e-3:
+            ax0.text(ii, .75, '⁎⁎', fontsize=axes_label_fontsize, horizontalalignment='center')
+        elif pA < 1e-2:
+            ax0.text(ii, .75, '⁎', fontsize=axes_label_fontsize, horizontalalignment='center')
+        else:
+            ax0.text(ii, .75, 'n.s.', fontsize=axes_label_fontsize, horizontalalignment='center')
         for jj, (s, ch) in enumerate(zip(subjects, chance)):
             col = subject_colors[s]
             x = ii + .125 *(jj-1.5)
@@ -43,6 +58,7 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
                  2 * [np.mean((multi_accuracy[ba][:, 2] -
                       single_accuracy['hg'][:, 2]) / single_accuracy['hg'][:, 2])], 'b')
         """
+    ax1.text(2.5, 2, 'all n.s.', fontsize=axes_label_fontsize, horizontalalignment='center')
     for ax in [ax0, ax1]:
         ax.tick_params(labelsize=ticklabel_fontsize)
     ax0.set_xticks(np.arange(len(band_abbreviations)))
