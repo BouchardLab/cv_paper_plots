@@ -23,7 +23,7 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
         y = data[:2, ii] / data[2, ii][np.newaxis,...]
         p = wilcoxon(y[0], y[1])[1] * 4
         ym = np.mean(y, axis=-1)
-        print('{}: p={}, delta: {}'.format(labels[s], p, np.diff(ym)))
+        print('{}: p={}, hg: {}, delta: {}'.format(labels[s], p, ym[1], np.diff(ym)[0]))
         yerr = np.std(y, axis=-1) / np.sqrt(n_iter)
         ax.errorbar(x, ym, yerr=yerr,
                     c=colors[s], label=labels[s].replace('ect', '.'), lw=lw)
