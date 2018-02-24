@@ -79,7 +79,7 @@ def condensed_2_dense(indices_dicts, y_hat_dicts, logits_dicts, ds):
         for key in ind.keys():
             indices2 = np.zeros_like(ind[key])
             y_hat2 = np.zeros((yhd[key][0].shape[0], y_dims[0]))
-            logits2 = -np.inf * np.ones_like(y_hat2) 
+            logits2 = -np.inf * np.ones_like(y_hat2)
             for old, new in enumerate(ds.mapping):
                 if not np.isinf(new):
                     indices2[ind[key] == new] = old
@@ -311,20 +311,17 @@ def time_accuracy(subject, bands, ec, kwargs, has_data,
 def conf_mat2accuracy(c_mat=None, v_mat=None, cv_mat=None):
     c_accuracy = None
     v_accuracy = None
-    cv_accuracy = None
     accuracy_per_cv = None
     p_accuracy = None
     m_accuracy = None
 
     if cv_mat is not None:
-        cv_accuracy = np.zeros(len(cv_mat))
         accuracy_per_cv = np.zeros((len(cv_mat), 57))
         p_right = np.zeros(len(cv_mat))
         m_right = np.zeros(len(cv_mat))
         p_wrong = np.zeros(len(cv_mat))
         m_wrong = np.zeros(len(cv_mat))
         for ii, cvf in enumerate(cv_mat):
-            cv_accuracy[ii] = np.diag(cvf).sum()/cvf.sum()
             for jj in range(57):
                 if cvf[jj].sum() > 0:
                     accuracy_per_cv[ii,jj] = cvf[jj,jj]/cvf[jj].sum()
@@ -354,8 +351,44 @@ def conf_mat2accuracy(c_mat=None, v_mat=None, cv_mat=None):
         for ii, vf in enumerate(v_mat):
             v_accuracy[ii] = np.diag(vf).sum()/vf.sum()
 
-    return (c_accuracy, v_accuracy, cv_accuracy, accuracy_per_cv,
+    return (c_accuracy, v_accuracy, accuracy_per_cv,
             p_accuracy, m_accuracy)
+
+def indx_dict2reduced_cv_conf_mat(indices_dicts, y_dim):
+    cv_dim = y_dim
+    n_files = len(indices_dicts)
+    n_targets = None
+    n_folds = None
+
+    def c_v_from_cv(cv, v_dim):
+        return int(cv/v_dim), cv % v_dim
+    def cv_from_c_v(c, v, v_dim):
+        return c*v_dim+v
+
+    for idx_dict in indices_dicts:
+        if n_folds is None:
+            n_folds = len(idx_dict.keys())
+        else:
+            assert n_folds == len(idx_dict.keys())
+        for key in idx_dict.keys():
+            nt = len(idx_dict[key])
+            assert not (nt != 1 and n_files != 1)
+            if n_targets is None:
+                n_targets = nt
+            else:
+                assert nt == n_targets
+
+    cv = np.zeros((n_folds, cv_dim, cv_dim))
+    idx_dict = indices_dicts[0]
+    for key in idx_dict.keys():
+        fold = int(key.split('fold')[1].split('.')[0])
+        assert fold < n_folds
+        indices = idx_dict[key][0]
+        y_true = indices[:,0]
+        y_pred = indices[:,1]
+        for yt, yp in zip(y_true, y_pred):
+            cv[fold, yt, yp] += 1
+    return cv
 
 def indx_dict2conf_mat(indices_dicts, y_dims):
     c = None
@@ -369,7 +402,7 @@ def indx_dict2conf_mat(indices_dicts, y_dims):
     n_folds = None
 
     def c_v_from_cv(cv, v_dim):
-        return int(cv/v_dim), cv % v_dim 
+        return int(cv/v_dim), cv % v_dim
     def cv_from_c_v(c, v, v_dim):
         return c*v_dim+v
 
@@ -463,7 +496,7 @@ def get_model_results(filename, model_folder, subject, bands, fold, kwargs):
     input_space = model.get_input_space()
     ec = ecog_neuro
 
-    ds = ec.ECoG(subject, bands, 
+    ds = ec.ECoG(subject, bands,
                  'train',
                  fold=fold,
                  **kwargs)
@@ -516,7 +549,7 @@ def get_articulator_state_matrix():
     cvs = sorted([c+v for c, v in itertools.product(consonants, vowels)])
     assert len(set(cvs)) == 57
     labels = ['lips', 'tongue', 'larynx', 'jaw', 'back tounge', 'high tongue']
-    
+
     features = np.zeros((57, 6), dtype=int)
     # b
     features[:3, (0, 2, 3)] = 1
@@ -583,7 +616,7 @@ def get_phonetic_feature_matrix():
               'lip rounding', 'jaw open']
     assert len(set(labels)) == 19
     pmv = {'place': slice(0, 9), 'manner': slice(9, 15), 'vowel': slice(15, 19)}
-    
+
     features = np.zeros((57, 19), dtype=int)
     # b
     features[:3, (0, 7, 8, 9)] = 1
@@ -653,7 +686,7 @@ def compute_pairwise_distances(X, dist_f):
 def cross_correlate(X1, X2):
     """
     Calculates cross correlation matrix.
-    
+
     X1: ndarray
         First set of variables (n, features)
     X2 : ndarray
@@ -668,7 +701,7 @@ def cross_correlate(X1, X2):
 def correlate(X1, X2):
     """
     Calculates correlation elementwise between rows.
-    
+
     X1: ndarray
         First set of variables (n, features)
     X2 : ndarray
