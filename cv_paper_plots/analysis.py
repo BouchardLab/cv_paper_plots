@@ -9,15 +9,18 @@ def place_equiv(y, y_hat):
     """
     Checks if two cvs have equivalent place.
     """
-    if ((y%19 in [0, 2, 10, 1, 11, 6, 3, 17]) and
-        (y_hat%19 in [0, 2, 10, 1, 11, 6, 3, 17])):
-        if (y%19 in [0, 2, 10]) and (y_hat%19 in [0, 2, 10]):
+    y_consonant = y // 3
+    y_hat_consonant = y_hat // 3
+    place_labels = [0, 2, 10, 1, 11, 6, 3, 17]
+    if ((y_consonant in place_labels) and
+        (y_hat_consonant in place_labels)):
+        if (y_consonant in [0, 2, 10]) and (y_hat_consonant in [0, 2, 10]):
             # b, f, r
             return True
-        elif (y%19 in [1, 11, 6]) and (y_hat%19 in [1, 11, 6]):
+        elif (y_consonant in [1, 11, 6]) and (y_hat_consonant in [1, 11, 6]):
             # d, s, l
             return True
-        elif (y%19 in [3, 17]) and (y_hat%19 in [3, 17]):
+        elif (y_consonant in [3, 17]) and (y_hat_consonant in [3, 17]):
             # g, y
             return True
         else:
@@ -30,15 +33,18 @@ def manner_equiv(y, y_hat):
     """
     Checks if two cvs have equivalent manner.
     """
-    if ((y%19 in [0, 1, 3, 2, 11, 10, 6, 17]) and
-        (y_hat%19 in [0, 1, 3, 2, 11, 10, 6, 17])):
-        if (y%19 in [0, 1, 3]) and (y_hat%19 in [0, 1, 3]):
+    y_consonant = y // 3
+    y_hat_consonant = y_hat // 3
+    manner_labels = [0, 2, 10, 1, 11, 6, 3, 17]
+    if ((y_consonant in manner_labels) and
+        (y_hat_consonant in manner_labels)):
+        if (y_consonant in [0, 1, 3]) and (y_hat_consonant in [0, 1, 3]):
             # b, d, g
             return True
-        elif (y%19 in [2, 11]) and (y_hat%19 in [2, 11]):
+        elif (y_consonant in [2, 11]) and (y_hat_consonant in [2, 11]):
             # f, s
             return True
-        elif (y%19 in [10, 6, 17]) and (y_hat%19 in [10, 6, 17]):
+        elif (y_consonant in [10, 6, 17]) and (y_hat_consonant in [10, 6, 17]):
             # r, l, y
             return True
         else:
@@ -58,7 +64,7 @@ def vowel_equiv(y, y_hat):
     """
     Checks if two cvs have equivalent vowel.
     """
-    return y%3 == y_hat%3
+    return y % 3 == y_hat % 3
 
 def load_raw_data(ds):
     ts = ds.get_test_set()
@@ -93,140 +99,6 @@ def condensed_2_dense(indices_dicts, y_hat_dicts, logits_dicts, ds):
         logits_dicts2.append(lgd2)
     return (indices_dicts2, y_hat_dicts2, logits_dicts2)
 
-def fit_accuracy_lognormal(data, il, nl, check_nan=False):
-    if check_nan:
-        assert len(data) == 1
-        data = data
-
-    def split_params(params):
-        total = params.shape[0]
-        n_examples = total // 4
-        logscale = params[:n_examples]
-        mean = params[n_examples:2*n_examples]
-        logvar = params[2*n_examples:3*n_examples]
-        b = params[3*n_examples:]
-        return logscale, mean, logvar, b
-
-    params = T.dvector('params')
-    logscale, mean, logvar, b = split_params(params)
-
-    all_cost = 0.
-
-    all_data = theano.shared(np.zeros((10,len(nl),len(il))).astype('float32'))
-
-    for n in range(2, len(nl)):
-        for i in range(1, len(il)):
-            if (not check_nan) or (not np.any(np.isnan(data[0][:, n-1, i-1]))):
-                form_sum = b
-                for k in range(i, i+n):
-                    form_sum += (T.exp(logscale) *
-                                 T.exp(-(T.log(k)-mean)**2/T.exp(logvar)) /
-                                 (k * np.sqrt(2. * np.pi) * T.sqrt(T.exp(logvar))))
-                cost = T.sum(.5*(form_sum-all_data[:,n-1,i-1])**2)
-                all_cost += cost
-
-    grad = T.grad(all_cost, params).astype('float64')
-    all_cost = all_cost.astype('float64')
-    f_df = theano.function(inputs=[params], outputs=[all_cost, grad])
-
-    gd = []
-    fit_params = []
-    for ds in data:
-        this_data = ds.astype('float32')
-        n_ex = this_data.shape[0]
-        all_data.set_value(this_data)
-        low = np.nanmean(ds[:,:,-1])
-        high = np.nanmean(ds[:,:-1,0])
-        w_0 = np.zeros(4*n_ex)
-        w_0[:n_ex] = np.log(max([high-low, 1e-5]))
-        w_0[n_ex:2*n_ex] = 0.
-        w_0[2*n_ex:3*n_ex] = 0.
-        w_0[3*n_ex:] = low
-        rval = minimize(f_df, w_0, jac=True, method='L-BFGS-B')
-        fit_params.append(rval.x)
-        logscale, mean, logvar, b = split_params(rval.x)
-        data = np.zeros_like(ds)
-        for f in range(ds.shape[0]):
-            fit_p = lambda n: (np.exp(logscale[f]) *
-                               np.exp(-(np.log(n)-mean[f])**2/np.exp(logvar[f])) /
-                               (n * np.sqrt(2. * np.pi * np.exp(logvar[f]))))
-            for n in range(ds.shape[1]):
-                for i in range(ds.shape[2]):
-                    data[f, n, i] = sum([fit_p(k) for k in range(i, i+n+1)])+b[f]
-        gd.append(data)
-    return gd + fit_params
-
-def svd_accuracy(file_name, ec, kwargs,
-                 folds=10, max_svs=10,
-                 max_init=15):
-    """
-    Classify data based on svd features.
-    """
-    kwargs['condense'] = False
-    ds = ec.ECoG(file_name, which_set='train', **kwargs)
-    n_classes = int(np.around(ds.y.max()+1))
-    max_svs = min(max_svs, n_classes)
-
-    init_list = np.arange(0, n_classes-max_svs+1)
-    init_list = init_list[init_list < max_init]
-    nsvs_list = np.arange(1, max_svs+1)
-
-    pa = np.inf * np.ones((folds, len(nsvs_list), len(init_list)))
-    ma = np.inf * np.ones((folds, len(nsvs_list), len(init_list)))
-    va = np.inf * np.ones((folds, len(nsvs_list), len(init_list)))
-    u_s = np.zeros((folds, n_classes, n_classes))
-    s_s = np.zeros((folds, n_classes))
-    v_s = np.zeros((folds, n_classes, ds.X.shape[1]))
-    ohf = OneHotFormatter(n_classes)
-
-    for fold in range(folds):
-        kwargs_copy = copy.deepcopy(kwargs)
-        print('fold: {}'.format(fold))
-        ds = ec.ECoG(file_name,
-                        which_set='train',
-                        fold=fold,
-                        center=False,
-                        **kwargs_copy)
-        # CV
-        ts = ds.get_test_set()
-        vs = ds.get_valid_set()
-        train_X = np.concatenate((ds.X, vs.X), axis=0)
-        train_mean = train_X.mean(axis=0)
-        train_X = train_X-train_mean
-        train_y = np.concatenate((ds.y, vs.y), axis=0)
-        test_X = ts.X-train_mean
-        test_y = ts.y
-        y_oh = ohf.format(train_y, mode='concatenate')
-        c_yx = (y_oh-y_oh.mean(axis=0)).T.dot(train_X)/train_X.shape[0]
-        u, s, v = np.linalg.svd(c_yx, full_matrices=False)
-        u_s[fold] = u
-        s_s[fold] = s
-        v_s[fold] = v
-        for ii, n_svs in enumerate(nsvs_list):
-            for jj, sv_init in enumerate(init_list):
-                vp = v[sv_init:sv_init+n_svs]
-                train_proj = train_X.dot(vp.T)
-                test_proj = test_X.dot(vp.T)
-                cl = LR(solver='lbfgs',
-                        multi_class='multinomial').fit(train_proj, train_y.ravel())
-                y_hat = cl.predict(test_proj)
-                p_results = []
-                m_results = []
-                v_results = []
-                for y, yh in zip(test_y.ravel(), y_hat.ravel()):
-                    pr = place_equiv(y, yh)
-                    if pr is not None:
-                        p_results.append(pr)
-                    mr = manner_equiv(y, yh)
-                    if mr is not None:
-                        m_results.append(mr)
-                    vr = vowel_equiv(y, yh)
-                    if vr is not None:
-                        v_results.append(vr)
-                pa[fold, ii, jj] = np.array(p_results).mean()
-                ma[fold, ii, jj] = np.array(m_results).mean()
-                va[fold, ii, jj] = np.array(v_results).mean()
-    return pa, ma, va, u_s, s_s, v_s, init_list, nsvs_list
 
 def time_accuracy(subject, bands, ec, kwargs, has_data,
                   folds=10):

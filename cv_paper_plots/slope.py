@@ -21,6 +21,7 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
     n_fracs = len(keys)
     accuracies = np.zeros((3, n_subjects, n_fracs, n_iter))
     slopes = np.zeros((2, n_subjects, 3))
+    slopes_crossval = np.zeros((2, n_subjects, 10))
     random = random.mean(axis=-1)
     for ii, key in enumerate(keys):
         deepi = deep[key]
@@ -46,32 +47,39 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
         ax0.errorbar(x, ym, yerr=yerr,
                      fmt=':', c=colors[s], lw=lw)
 
-        """
-        x = training_size[jj]
-        print(x.shape, yl.shape)
-        xs = np.tile(x.T.ravel(), 2)
-        ys = np.concatenate((yl.T.ravel(), yd.T.ravel()))
-        plt.figure()
-        plt.scatter(xs, ys)
-        deep = np.concatenate((np.zeros(len(keys) * n_iter),
-                               np.ones(len(keys) * n_iter))).astype(bool)
-        df = pd.DataFrame.from_dict({'x': xs, 'y':ys, 'deep': deep})
-        formula = 'y ~ x : C(deep)'
-        lm = ols(formula, df)
-        fit = lm.fit()
-        print(fit.summary())
-        """
         x = training_size[jj] / 1000.
         y = accuracies[0, jj] / accuracies[2, jj]
+        for ii in range(y.shape[1]):
+            slopes_crossval[0, jj, ii] = linregress(x[:, ii], y[:, ii])[0]
+        print(x.shape, y.shape)
         slope0, intercept0, r_value0, p_value0, std_err0 = linregress(x.ravel(), y.ravel())
-        print(slope0, r_value0, p_value0, std_err0)
+        #print(slope0, r_value0, p_value0, std_err0)
         y = accuracies[1, jj] / accuracies[2, jj]
+        for ii in range(y.shape[1]):
+            slopes_crossval[1, jj, ii] = linregress(x[:, ii], y[:, ii])[0]
         slope1, intercept1, r_value1, p_value1, std_err1 = linregress(x.ravel(), y.ravel())
-        print(slope1, r_value1, p_value1, std_err1)
+        #print(slope1, r_value1, p_value1, std_err1)
         p = parametric_slopes_test(slope0, std_err0, x.size, slope1, std_err1, x.size) * 4
         slopes[0, jj] = slope0, std_err0, p
         slopes[1, jj] = slope1, std_err1, p
-        print()
+        #print()
+    anova_model = []
+    anova_subject = []
+    anova_slope = []
+    for model in [0, 1]:
+        for subject in range(4):
+            sl = slopes_crossval[model, subject]
+            anova_slope.append(sl)
+            anova_model.append(model * np.ones_like(sl))
+            anova_subject.append(subject * np.ones_like(sl))
+    df = pd.DataFrame.from_dict({'slope': np.array(anova_slope).ravel(),
+                                 'model': np.array(anova_model).ravel(),
+                                 'subject': np.array(anova_subject).ravel()})
+    formula = "slope ~ C(model, Treatment(0)) + C(subject, Treatment(0))"
+    lm = ols(formula, df)
+    fit = lm.fit()
+    print(fit.summary())
+
 
     ax0.set_xlim(.45, 1.05)
     if legend:
@@ -107,30 +115,28 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
     ax1.set_title('Consonant\nVowel', fontsize=axes_label_fontsize)
     ax1.set_ylabel(r'$\Delta$ Accuracy/chance per 1k training examples',
                    fontsize=axes_label_fontsize)
-    print(('Deep networks scale better with dataset size than logistic regresion ' +
-           'with an improvement of {} $\pm$ {}  and {} $\pm$ {} ' +
+    print(('Deep networks scale better with dataset size than logistic regression ' +
+           'with an improvement of {}x $\pm$ {}  and {}x $\pm$ {} ' +
            'over chance per 1000 training samples respectively. This improvement ' +
-           'is summarized across subjects in Fig \\ref{}fig:slope{}B. ' +
+           'is summarized across subjects in Fig \\ref{{fig:slope}}B. ' +
            'For the subject with highest accuracy (Subject 1), the ' +
            'change in accuracy over chance per 1000 training examples ' +
            'for deep networks and logistic regression are ' +
-           '{} $\pm$ {} and {} $\pm$ {} respectively. ' +
+           '{}x $\pm$ {} and {}x $\pm$ {} respectively. ' +
            'For the subject with highest slope (Subject 4), the ' +
            'change in accuracy over chance per 1000 training examples ' +
            'for deep networks and logistic regression are ' +
-           '{} $\pm$ {} and {} $\pm$ {} respectively.').format(np.round(slopes[1].mean(), 1),
-                                       np.round(slopes[1].std(), 1),
-                                       np.round(slopes[0].mean(), 1),
-                                       np.round(slopes[0].std(), 1),
-                                       '{',
-                                       '}',
-                                       np.round(slopes[1, 0].mean(), 1),
-                                       np.round(slopes[1, 0].std(), 1),
-                                       np.round(slopes[0, 0].mean(), 1),
-                                       np.round(slopes[0, 0].std(), 1),
-                                       np.round(slopes[1, 3].mean(), 1),
-                                       np.round(slopes[1, 3].std(), 1),
-                                       np.round(slopes[0, 3].mean(), 1),
-                                       np.round(slopes[0, 3].std(), 1)))
+           '{}x $\pm$ {} and {}x $\pm$ {} respectively.').format(np.round(slopes[1, :, 0].mean(), 1),
+                                       np.round(slopes[1, :, 0].std(), 1),
+                                       np.round(slopes[0, :, 0].mean(), 1),
+                                       np.round(slopes[0, :, 0].std(), 1),
+                                       np.round(slopes[1, 0, 0], 1),
+                                       np.round(slopes[1, 0, 1], 1),
+                                       np.round(slopes[0, 0, 0], 1),
+                                       np.round(slopes[0, 0, 1], 1),
+                                       np.round(slopes[1, 3, 0], 1),
+                                       np.round(slopes[1, 3, 1], 1),
+                                       np.round(slopes[0, 3, 0], 1),
+                                       np.round(slopes[0, 3, 1], 1)))
     for ax in axes:
         ax.tick_params(labelsize=ticklabel_fontsize)

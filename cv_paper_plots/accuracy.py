@@ -43,8 +43,8 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
     diff = data[1] - data[0]
     task_name = task.split(' ')[0].replace('\n', ' ').lower()
     s1 = ('The highest deep network accuracy for a single subject ' +
-          'on the {} task is for Subject 1 which is {}$\pm$ {}\% ' +
-          '({} times chance, {}\%) and {}$\pm$ {}\% ({} times chance, ' +
+          'on the {} task is for Subject 1 which is {} $\pm$ {}\% ' +
+          '({} times chance, {}\%) and {} $\pm$ {}\% ({} times chance, ' +
           '{}\%) for logistic regression and deep networks ' +
           'respectively, which is a {}\% ' +
           'improvement.')
@@ -105,8 +105,8 @@ def channel_capacity(confusions):
         ccs[ii] = -f(res.x)
     return ccs
 
-def naive_channel_capacity(accuracy, n):
-    accuracies = np.array(accuracies)
+def naive_channel_capacity(accuracies, n):
+    accuracies = np.atleast_1d(np.array(accuracies))
     ccs = np.zeros(accuracies.size)
     for ii, a in enumerate(accuracies):
         rval = np.log2(n)
