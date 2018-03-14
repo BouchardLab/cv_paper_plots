@@ -48,7 +48,7 @@ def create_dendrogram(features, labels, color_threshold=None,
 
 
 def plot_dendrogram(yhs, threshold, cvs, max_d, ax):
-    ax.axhline(threshold, 0, 1, linestyle='--', c='k', lw=1)
+    ax.axhline(threshold, 0, 1, linestyle='--', c='gray', lw=1)
 
     z, r = create_dendrogram(yhs, cvs, threshold, ax=ax)
     ax.set_xticks([])
@@ -61,7 +61,7 @@ def plot_dendrogram(yhs, threshold, cvs, max_d, ax):
 
 
 def plot_distance_vs_clusters(z, threshold, max_d, ax):
-    ax.axhline(threshold, 0, 1, linestyle='--', c='k', lw=1)
+    ax.axhline(threshold, 0, 1, linestyle='--', c='gray', lw=1)
     ds = z[:, 2]
     bins = np.linspace(0, ds.max(), 1000)
     h, b = np.histogram(ds, bins, density=False)
@@ -73,9 +73,10 @@ def plot_distance_vs_clusters(z, threshold, max_d, ax):
     ax.set_yticks([0, max_d])
     ax.set_yticklabels([0, max_d])
     ax.set_ylim(None, max_d)
+    ax.tick_params(axis='both', which='major', pad=1)
     ax.tick_params(labelsize=ticklabel_fontsize)
-    ax.set_xlabel('# Clusters', fontsize=axes_label_fontsize, labelpad=0)
-    ax.set_ylabel('Distance', fontsize=axes_label_fontsize, labelpad=-10)
+    ax.set_xlabel('# Clusters', fontsize=axes_label_fontsize, labelpad=-2)
+    ax.set_ylabel('Distance', fontsize=axes_label_fontsize, labelpad=-15)
 
 
 def plot_cv_accuracy(cv_accuracy, ax):
