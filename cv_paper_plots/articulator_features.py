@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from .style import (subjects, subject_labels, subject_colors,
-                    axes_label_fontsize, ticklabel_fontsize)
+                    axes_label_fontstyle, ticklabel_fontstyle)
 
 
 def get_articulator_state_matrix(ax=None):
@@ -140,12 +140,11 @@ def plot(ax, features, labels):
     n = len(labels)
     ax.imshow(features.T, cmap='gray', interpolation='nearest')
     ax.set_xticks(range(57))
-    ax.set_xticklabels(19 * ['/a/', '/i/', '/u/'],
-                       fontsize=ticklabel_fontsize-1)
+    ax.set_xticklabels(19 * ['/a/', '/i/', '/u/'], **ticklabel_fontstyle)
     for ii, label in enumerate(ax.xaxis.get_major_ticks()):
         label.set_pad(5*((ii % 3) - 1) + 6)
     ax.set_yticks(range(n))
-    ax.set_yticklabels(labels, fontsize=ticklabel_fontsize-1)
+    ax.set_yticklabels(labels, **ticklabel_fontstyle)
     lw = 1.
     for x in np.linspace(.5, 55.5, 56):
         ax.axvline(x, 0, 1, c='gray', lw=lw)
@@ -167,7 +166,7 @@ def hbracket(ax, x0, x1, y, text):
     connectionstyle="bar,fraction={}".format(fraction)),
     annotation_clip=False)
     ax.text(.5 * (x0 + x1), y-1.5, '/{}/'.format(text),
-            fontsize=ticklabel_fontsize-1,
+            fontsize=ticklabel_fontstyle['fontsize'],
             verticalalignment='center',
             horizontalalignment='center')
 
@@ -178,5 +177,5 @@ def vbracket(ax, x, y0, y1, text):
     arrowprops=dict(arrowstyle="-", ec='k',
     connectionstyle="bar,fraction={}".format(fraction)),
     annotation_clip=False)
-    ax.text(x+1.5, .5 * (y0 + y1), text, fontsize=ticklabel_fontsize-1,
+    ax.text(x+1.5, .5 * (y0 + y1), text, fontsize=ticklabel_fontstyle['fontsize'],
             verticalalignment='center')

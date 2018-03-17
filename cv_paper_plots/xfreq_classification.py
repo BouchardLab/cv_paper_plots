@@ -5,7 +5,8 @@ from scipy.stats import wilcoxon
 from ecog.utils.bands import neuro, chang_lab
 
 from .style import (subject_colors, subject_labels,
-                    ticklabel_fontsize, axes_label_fontsize)
+                    ticklabel_fontstyle, axes_label_fontstyle,
+                    tickparams_fontstyle)
 
 def plot_xfreq_classification(subjects, band_abbreviations, bands,
                               single_accuracy, multi_accuracy, chance, axes):
@@ -20,11 +21,11 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
         pB = wilcoxon(y.ravel(), y_hg.ravel())[1] * 5
         print('{}, pB: {:0.2e}\n'.format(ba, pB))
         if pA < 1e-3:
-            ax0.text(ii, .75, '⁎⁎', fontsize=axes_label_fontsize, horizontalalignment='center')
+            ax0.text(ii, .75, '⁎⁎', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
         elif pA < 1e-2:
-            ax0.text(ii, .75, '⁎', fontsize=axes_label_fontsize, horizontalalignment='center')
+            ax0.text(ii, .75, '⁎', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
         else:
-            ax0.text(ii, .75, 'n.s.', fontsize=axes_label_fontsize, horizontalalignment='center')
+            ax0.text(ii, .75, 'n.s.', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
         for jj, (s, ch) in enumerate(zip(subjects, chance)):
             col = subject_colors[s]
             x = ii + .125 *(jj-1.5)
@@ -58,9 +59,9 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
                  2 * [np.mean((multi_accuracy[ba][:, 2] -
                       single_accuracy['hg'][:, 2]) / single_accuracy['hg'][:, 2])], 'b')
         """
-    ax1.text(2.5, 2, 'all n.s.', fontsize=axes_label_fontsize, horizontalalignment='center')
+    ax1.text(2.5, 2, 'all n.s.', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
     for ax in [ax0, ax1]:
-        ax.tick_params(labelsize=ticklabel_fontsize)
+        ax.tick_params(**tickparams_fontstyle)
     ax0.set_xticks(np.arange(len(band_abbreviations)))
     ax0.set_xticklabels(bands)
     ax0.set_xlim(-.5, 4.5)
@@ -69,13 +70,13 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
     ax1.set_xlim(-.5, 5.5)
     ax0.set_ylim(.5, None)
     ax0.set_yticks([1, 2, 3])
-    ax0.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
-    ax1.set_ylabel(r'$\Delta$ % Accuracy', fontsize=axes_label_fontsize)
-    ax1.set_ylabel(r'$\Delta$ Accuracy/HG', fontsize=axes_label_fontsize)
-    ax1.set_ylabel(r'$\Delta$ Accuracy/chance', fontsize=axes_label_fontsize)
+    ax0.set_ylabel('Accuracy/chance', **axes_label_fontstyle)
+    ax1.set_ylabel(r'$\Delta$ % Accuracy', **axes_label_fontstyle)
+    ax1.set_ylabel(r'$\Delta$ Accuracy/HG', **axes_label_fontstyle)
+    ax1.set_ylabel(r'$\Delta$ Accuracy/chance', **axes_label_fontstyle)
     ax0.plot([-10, 10], [1, 1], '--', c='steelblue', lw=.5)
     ax1.plot([-10, 10], [0, 0], '--', c='steelblue', lw=.5)
-    ax1.legend(loc='lower left', fontsize=ticklabel_fontsize, ncol=2)
+    ax1.legend(loc='lower left', fontsize=ticklabel_fontstyle['fontsize'], ncol=2)
 
 def plot_correlation_vs_accuracy(subjects, band_abbreviations, bands,
                                  single_accuracy, multi_accuracy, chance, axes):
@@ -123,15 +124,15 @@ def plot_correlation_vs_accuracy(subjects, band_abbreviations, bands,
             ysem = y.std() / np.sqrt(10)
             ax1.errorbar(xm, ym, xerr=xsem, yerr=ysem, fmt='.', c=c)
 
-    ax0.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
-    ax1.set_ylabel(r'$\Delta$ % Accuracy', fontsize=axes_label_fontsize)
-    ax1.set_ylabel(r'$\Delta$ Accuracy/HG', fontsize=axes_label_fontsize)
-    ax1.set_ylabel(r'$\Delta$ Accuracy/chance', fontsize=axes_label_fontsize)
+    ax0.set_ylabel('Accuracy/chance', **axes_label_fontstyle)
+    ax1.set_ylabel(r'$\Delta$ % Accuracy', **axes_label_fontstyle)
+    ax1.set_ylabel(r'$\Delta$ Accuracy/HG', **axes_label_fontstyle)
+    ax1.set_ylabel(r'$\Delta$ Accuracy/chance', **axes_label_fontstyle)
     ax0.set_yticks([1, 2, 3])
     ax0.axhline(1, linestyle='--', c='steelblue', lw=.5)
     ax1.axhline(0, linestyle='--', c='steelblue', lw=.5)
     for ax in axes:
-        ax.set_xlabel(r'H$\gamma$ Corr. Coef.', fontsize=axes_label_fontsize)
-        ax.tick_params(labelsize=ticklabel_fontsize)
+        ax.set_xlabel(r'H$\gamma$ Corr. Coef.', **axes_label_fontstyle)
+        ax.tick_params(**tickparams_fontstyle)
     ax0.legend(loc='best', ncol=1,
-              prop={'size': ticklabel_fontsize})
+              prop={'size': ticklabel_fontstyle['fontsize']})

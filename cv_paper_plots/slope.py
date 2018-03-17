@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 
 from .style import (subject_colors as colors,
                     subject_labels as labels,
-                    ticklabel_fontsize,
-                    axes_label_fontsize)
+                    ticklabel_fontstyle,
+                    axes_label_fontstyle,
+                    tickparams_fontstyle)
 from .stats import (permute_paired_diffs,
                     permute_paired_regression,
                     parametric_slopes_test)
@@ -83,10 +84,10 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
 
     ax0.set_xlim(.45, 1.05)
     if legend:
-        ax0.legend(loc='best', ncol=2, fontsize=ticklabel_fontsize)
+        ax0.legend(loc='best', ncol=2, fontsize=ticklabel_fontstyle['fontsize'])
     ax0.axhline(1, c='steelblue', linestyle='--', lw=1)
-    ax0.set_xlabel('Training dataset fraction', fontsize=axes_label_fontsize)
-    ax0.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
+    ax0.set_xlabel('Training dataset fraction', **axes_label_fontstyle)
+    ax0.set_ylabel('Accuracy/chance', **axes_label_fontstyle)
     ax0.set_yticks([1, 5, 10, 15, 20])
 
     for ii, s in enumerate(subjects):
@@ -98,23 +99,22 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
                      c=colors[s], lw=lw)
         print(p)
         if p < .001:
-            ax1.text(x[1] + .05, ym[1], '⁎⁎', color=colors[s], fontsize=axes_label_fontsize)
+            ax1.text(x[1] + .05, ym[1], '⁎⁎', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
             """
         elif p < .01:
-            ax1.text(x[1] + .05, ym[1], '⁎⁎', color=colors[s], fontsize=axes_label_fontsize)
+            ax1.text(x[1] + .05, ym[1], '⁎⁎', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
             """
         elif p < .05:
-            ax1.text(x[1] + .05, ym[1], '⁎', color=colors[s], fontsize=axes_label_fontsize)
+            ax1.text(x[1] + .05, ym[1], '⁎', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
         else:
-            ax1.text(x[1] + .05, ym[1], 'n.s.', color=colors[s], fontsize=axes_label_fontsize)
+            ax1.text(x[1] + .05, ym[1], 'n.s.', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
 
     ax1.set_xticks([0, 1])
-    ax1.set_xticklabels(['Logistic', 'Deep'])
     ax1.set_xlim(-.5, 1.5)
     ax1.axhline(0, c='steelblue', linestyle='--', lw=1)
-    ax1.set_title('Consonant\nVowel', fontsize=axes_label_fontsize)
+    ax1.set_title('Consonant\nVowel', **axes_label_fontstyle)
     ax1.set_ylabel(r'$\Delta$ Accuracy/chance per 1k training examples',
-                   fontsize=axes_label_fontsize)
+                   **axes_label_fontstyle)
     print(('Deep networks scale better with dataset size than logistic regression ' +
            'with an improvement of {}x $\pm$ {}  and {}x $\pm$ {} ' +
            'over chance per 1000 training samples respectively. This improvement ' +
@@ -139,4 +139,5 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
                                        np.round(slopes[0, 3, 0], 1),
                                        np.round(slopes[0, 3, 1], 1)))
     for ax in axes:
-        ax.tick_params(labelsize=ticklabel_fontsize)
+        ax.tick_params(**tickparams_fontstyle)
+    ax1.set_xticklabels(['Logistic', 'Deep'], **axes_label_fontstyle)

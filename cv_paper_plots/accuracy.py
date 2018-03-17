@@ -3,8 +3,9 @@ from scipy.stats import wilcoxon
 from scipy.optimize import minimize
 from .style import (subject_colors as colors,
                     subject_labels as labels,
-                    ticklabel_fontsize,
-                    axes_label_fontsize)
+                    ticklabel_fontstyle,
+                    axes_label_fontstyle,
+                    tickparams_fontstyle)
 from .stats import permute_paired_diffs
 
 
@@ -30,13 +31,13 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
                     c=colors[s], label=labels[s].replace('ect', '.'), lw=lw)
         if show_significance:
             if p < .001:
-                ax.text(x[1] + .1, ym[1], '⁎⁎⁎', color=colors[s], fontsize=axes_label_fontsize)
+                ax.text(x[1] + .1, ym[1], '⁎⁎⁎', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
             elif p < .01:
-                ax.text(x[1] + .1, ym[1], '⁎⁎', color=colors[s], fontsize=axes_label_fontsize)
+                ax.text(x[1] + .1, ym[1], '⁎⁎', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
             elif p < .05:
-                ax.text(x[1] + .1, ym[1], '⁎', color=colors[s], fontsize=axes_label_fontsize)
+                ax.text(x[1] + .1, ym[1], '⁎', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
             else:
-                ax.text(x[1] + .1, ym[1], 'n.s.', color=colors[s], fontsize=axes_label_fontsize)
+                ax.text(x[1] + .1, ym[1], 'n.s.', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
     p = wilcoxon(data[0].ravel(), data[1].ravel())[1] * 5
     print('all subject: p={}'.format(p))
 
@@ -69,13 +70,13 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
     print(s1 + ' ' + s2 + '\n')
 
     if legend:
-        ax.legend(loc='upper left', prop={'size': ticklabel_fontsize})
+        ax.legend(loc='upper left', prop={'size': ticklabel_fontstyle['fontsize']})
     ax.set_xticks([0, 1])
-    ax.set_xticklabels(['Logistic', 'Deep'])
+    ax.set_xticklabels(['Logistic', 'Deep'], **axes_label_fontstyle)
     ax.set_xlim(-.5, 1.5)
     ax.axhline(1, c='steelblue', linestyle='--', lw=1)
-    ax.set_ylabel('Accuracy/chance', fontsize=axes_label_fontsize)
-    ax.set_title(task, fontsize=axes_label_fontsize)
+    ax.set_ylabel('Accuracy/chance', **axes_label_fontstyle)
+    ax.set_title(task, **axes_label_fontstyle)
     ax.set_ylim([None, ymax])
     if ymax is not None and ymax < 3:
         ax.set_yticks([1, 2])
@@ -83,7 +84,7 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
         ax.set_yticks([1, 5, 9])
     else:
         ax.set_yticks([1, 5, 10, 15, 20])
-    ax.tick_params(labelsize=ticklabel_fontsize)
+    ax.tick_params(**tickparams_fontstyle)
 
 def mutual_information(Pyhy, logPy):
     Pyhy = Pyhy / Pyhy.sum(axis=0)

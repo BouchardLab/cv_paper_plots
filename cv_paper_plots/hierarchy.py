@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon, ranksums, ttest_1samp
 
 from .style import (subjects, subject_labels, subject_colors,
-                    axes_label_fontsize, ticklabel_fontsize)
+                    axes_label_fontstyle, ticklabel_fontstyle,
+                    tickparams_fontstyle)
 
 
 def create_dendrogram(features, labels, color_threshold=None,
@@ -52,11 +53,11 @@ def plot_dendrogram(yhs, threshold, cvs, max_d, ax):
 
     z, r = create_dendrogram(yhs, cvs, threshold, ax=ax)
     ax.set_xticks([])
-    ax.set_ylabel('Distance', fontsize=axes_label_fontsize, labelpad=0)
+    ax.set_ylabel('Distance', labelpad=0, **axes_label_fontstyle)
     ax.set_ylim(None, max_d)
     ax.set_yticks([0, max_d])
     ax.set_yticklabels([0, max_d])
-    ax.tick_params(labelsize=ticklabel_fontsize)
+    ax.tick_params(*tickparams_fontstyle)
     return z, r
 
 
@@ -74,9 +75,9 @@ def plot_distance_vs_clusters(z, threshold, max_d, ax):
     ax.set_yticklabels([0, max_d])
     ax.set_ylim(None, max_d)
     ax.tick_params(axis='both', which='major', pad=1)
-    ax.tick_params(labelsize=ticklabel_fontsize)
-    ax.set_xlabel('# Clusters', fontsize=axes_label_fontsize, labelpad=-2)
-    ax.set_ylabel('Distance', fontsize=axes_label_fontsize, labelpad=-15)
+    ax.tick_params(**tickparams_fontstyle)
+    ax.set_xlabel('# Clusters', labelpad=-2, **axes_label_fontstyle)
+    ax.set_ylabel('Distance', labelpad=-15, **axes_label_fontstyle)
 
 
 def plot_cv_accuracy(cv_accuracy, ax):
@@ -87,40 +88,36 @@ def plot_cv_accuracy(cv_accuracy, ax):
     ax.set_yticks([])
     ax.set_xticks([0, .5])
     ax.set_xticklabels([0, .5])
-    ax.tick_params(labelsize=ticklabel_fontsize)
-    ax.set_xlabel('Accuracy', fontsize=axes_label_fontsize, labelpad=0)
+    ax.tick_params(**tickparams_fontstyle)
+    ax.set_xlabel('Accuracy', labelpad=0, **axes_label_fontstyle)
 
 
 def plot_soft_confusion(yhs, r, f, ax, cax):
     im = ax.imshow(yhs, cmap='gray_r', interpolation='nearest',
             vmin=0, vmax=yhs.max())
     ax.set_xticks(np.linspace(0, 56, 57))
-    ax.set_xticklabels(r['ivl'])
+    ax.set_xticklabels(r['ivl'], **ticklabel_fontstyle)
     ax.set_yticks(np.linspace(0, 56, 57))
-    ax.set_yticklabels(r['ivl'])
-    ax.set_ylabel('Target CV', fontsize=axes_label_fontsize)
-    ax.set_xlabel('Predicted CV', fontsize=axes_label_fontsize)
+    ax.set_yticklabels(r['ivl'], **ticklabel_fontstyle)
+    ax.set_ylabel('Target CV', **axes_label_fontstyle)
+    ax.set_xlabel('Predicted CV', **axes_label_fontstyle)
     ax.xaxis.tick_top()
     ax.yaxis.tick_left()
 
     tick_offset = .02
     tick_scale = -.05
-    pos = 0
-    for label in ax.yaxis.get_majorticklabels():
-        label.set_position([tick_scale*(((pos+1)%2)-.5)-tick_offset, 1])
-        pos += 1
+    for ii, label in enumerate(ax.yaxis.get_majorticklabels()):
+        label.set_position([tick_scale*(((ii+1)%2)-.5)-tick_offset, 1])
 
-    tick_offset = -.01
-    tick_scale = -.03
-    pos = 0
-    for label in ax.xaxis.get_majorticklabels():
-        label.set_position([0, 1+tick_scale*(((pos+1)%2)-.5)-tick_offset])
-        pos += 1
-    ax.tick_params(labelsize=ticklabel_fontsize-2)
+    tick_offset = -.025
+    tick_scale = -.025
+    for ii, label in enumerate(ax.xaxis.get_majorticklabels()):
+        label.set_position([0, 1+tick_scale*((ii%3)-.5)-tick_offset])
+    #ax.tick_params(**tickparams_fontstyle)
 
     c = f.colorbar(im, cax=cax, orientation='horizontal')
     c.set_ticks([0, .1])
-    c.ax.tick_params(labelsize=ticklabel_fontsize)
+    c.ax.tick_params(**tickparams_fontstyle)
 
 
 def load_predictions(folder, files):
@@ -217,7 +214,7 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
         xytext=(x, y1), textcoords='data',
         arrowprops=dict(arrowstyle="-", ec='k',
         connectionstyle="bar,fraction={}".format(fraction)))
-        ax.text(x-.0325, .5 * (y0 + y1), n_stars*'⁎', fontsize=axes_label_fontsize,
+        ax.text(x-.0325, .5 * (y0 + y1), n_stars*'⁎', fontsize=ticklabel_fontstyle['fontsize'],
                 verticalalignment='center')
 
     if wilcoxon(np.concatenate(dmjar), np.concatenate(dp))[1] * 4 < 1e-10:
@@ -227,11 +224,11 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
     if wilcoxon(np.concatenate(dmjar), np.concatenate(dm))[1] * 4 < 1e-10:
         draw_sig(ax, -.06, 1, 3, 2)
     if ttest_1samp(np.concatenate(dv), 0)[1] * 4 < 1e-4:
-        ax.text(-.07, 0, '⁎', fontsize=axes_label_fontsize, verticalalignment='center')
+        ax.text(-.07, 0, '⁎', fontsize=ticklabel_fontstyle['fontsize'], verticalalignment='center')
     bp = ax.boxplot(data, **box_params)
     ax.set_xlim([-.1, .65])
-    ax.set_xlabel('Correlation Coefficient', fontsize=axes_label_fontsize)
-    ax.tick_params(labelsize=ticklabel_fontsize)
+    ax.set_xlabel('Correlation Coefficient', **axes_label_fontstyle)
+    ax.tick_params(**tickparams_fontstyle)
     for ii, x in enumerate([dv, dm, dp, dmjar]):
         for s, xs in zip(subjects, x):
             if ii == 0:
@@ -240,4 +237,4 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
                 label = None
             plt.plot(np.median(xs), ii, 'o',
                      markersize=4, c=subject_colors[s], label=label)
-    ax.legend(loc='lower right', ncol=2, prop={'size': ticklabel_fontsize})
+    ax.legend(loc='lower right', ncol=2, prop={'size': ticklabel_fontstyle['fontsize']})
