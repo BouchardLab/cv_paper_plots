@@ -78,6 +78,7 @@ def plot_distance_vs_clusters(z, threshold, max_d, ax):
     ax.tick_params(**tickparams_fontstyle)
     ax.set_xlabel('# Clusters', labelpad=-2, **axes_label_fontstyle)
     ax.set_ylabel('Distance', labelpad=-15, **axes_label_fontstyle)
+    return cs, b[1:]
 
 
 def plot_cv_accuracy(cv_accuracy, ax):

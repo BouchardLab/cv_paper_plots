@@ -10,7 +10,7 @@ from .stats import permute_paired_diffs
 
 
 def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel',
-        legend=True, ymax=None, show_significance=False):
+        legend=True, ymax=None, show_significance=False, normalize_chance=True):
     lw = 2
     n_subjects, _, n_iter = deep.shape
     data = np.zeros((3, n_subjects, n_iter))
@@ -22,10 +22,14 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
 
     for ii, s in enumerate(subjects):
         x = np.array([0, 1]) + .05 * (ii-1.5)
-        y = data[:2, ii] / data[2, ii][np.newaxis,...]
-        p = wilcoxon(y[0], y[1])[1] * 4
+        if normalize_chance:
+            y = data[:2, ii] / data[2, ii][np.newaxis,...]
+        else:
+            y = data[:2, ii]
         ym = np.mean(y, axis=-1)
-        print('{}: p={}, hg: {}, delta: {}'.format(labels[s], p, ym[1], np.diff(ym)[0]))
+        if show_significance:
+            p = wilcoxon(y[0], y[1])[1] * 4
+            print('{}: p={}, hg: {}, delta: {}'.format(labels[s], p, ym[1], np.diff(ym)[0]))
         yerr = np.std(y, axis=-1) / np.sqrt(n_iter)
         ax.errorbar(x, ym, yerr=yerr,
                     c=colors[s], label=labels[s].replace('ect', '.'), lw=lw)
@@ -38,47 +42,59 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
                 ax.text(x[1] + .1, ym[1], '⁎', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
             else:
                 ax.text(x[1] + .1, ym[1], 'n.s.', color=colors[s], fontsize=ticklabel_fontstyle['fontsize'])
-    p = wilcoxon(data[0].ravel(), data[1].ravel())[1] * 5
-    print('all subject: p={}'.format(p))
+    if show_significance:
+        p = wilcoxon(data[0].ravel(), data[1].ravel())[1] * 5
+        print('all subject: p={}'.format(p))
 
-    diff = data[1] - data[0]
-    task_name = task.split(' ')[0].replace('\n', ' ').lower()
-    s1 = ('The highest deep network accuracy for a single subject ' +
-          'on the {} task is for Subject 1 which is {} $\pm$ {}\% ' +
-          '({} times chance, {}\%) and {} $\pm$ {}\% ({} times chance, ' +
-          '{}\%) for logistic regression and deep networks ' +
-          'respectively, which is a {}\% ' +
-          'improvement.')
-    s1 = s1.format(task_name,
-                   np.round(100 * data[1,0].mean(), 1),
-                   np.round(100 * data[1,0].std(), 1),
-                   np.round((data[1,0] / data[2,0]).mean(), 1),
-                   np.round(100 * data[2,0].mean(), 1),
-                   np.round(100 * data[0,0].mean(), 1),
-                   np.round(100 * data[0,0].std(), 1),
-                   np.round((data[0,0] / data[2,0]).mean(), 1),
-                   np.round(100 * data[2,0].mean(), 1),
-                   np.round(100 * ((data[1, 0] / data[0,0]).mean() - 1), 1))
-    s2 = ('Mean {} classification accuracy across subjects (XX way) ' +
-          'with deep networks is {} $\pm$ {}\%. For logistic regression, ' +
-          'it is {} $\pm$ {}\%.')
-    s2 = s2.format(task_name,
-                   np.round(100 * data[1].mean(), 1),
-                   np.round(100 * data[1].std(), 1),
-                   np.round(100 * data[0].mean(), 1),
-                   np.round(100 * data[0].std(), 1))
-    print(s1 + ' ' + s2 + '\n')
+        diff = data[1] - data[0]
+        task_name = task.split(' ')[0].replace('\n', ' ').lower()
+        s1 = ('The highest deep network accuracy for a single subject ' +
+              'on the {} task is for Subject 1 which is {} $\pm$ {}\% ' +
+              '({} times chance, {}\%) and {} $\pm$ {}\% ({} times chance, ' +
+              '{}\%) for logistic regression and deep networks ' +
+              'respectively, which is a {}\% ' +
+              'improvement.')
+        s1 = s1.format(task_name,
+                       np.round(100 * data[1,0].mean(), 1),
+                       np.round(100 * data[1,0].std(), 1),
+                       np.round((data[1,0] / data[2,0]).mean(), 1),
+                       np.round(100 * data[2,0].mean(), 1),
+                       np.round(100 * data[0,0].mean(), 1),
+                       np.round(100 * data[0,0].std(), 1),
+                       np.round((data[0,0] / data[2,0]).mean(), 1),
+                       np.round(100 * data[2,0].mean(), 1),
+                       np.round(100 * ((data[1, 0] / data[0,0]).mean() - 1), 1))
+        s2 = ('Mean {} classification accuracy across subjects (XX way) ' +
+              'with deep networks is {} $\pm$ {}\%. For logistic regression, ' +
+              'it is {} $\pm$ {}\%.')
+        s2 = s2.format(task_name,
+                       np.round(100 * data[1].mean(), 1),
+                       np.round(100 * data[1].std(), 1),
+                       np.round(100 * data[0].mean(), 1),
+                       np.round(100 * data[0].std(), 1))
+        print(s1 + ' ' + s2 + '\n')
 
     if legend:
         ax.legend(loc='upper left', prop={'size': ticklabel_fontstyle['fontsize']})
     ax.set_xticks([0, 1])
     ax.set_xticklabels(['Logistic', 'Deep'], **axes_label_fontstyle)
     ax.set_xlim(-.5, 1.5)
-    ax.axhline(1, c='steelblue', linestyle='--', lw=1)
-    ax.set_ylabel('Accuracy/chance', **axes_label_fontstyle)
+    if normalize_chance:
+        ax.axhline(1, c='steelblue', linestyle='--', lw=1)
+        ax.set_ylabel('Accuracy/chance', **axes_label_fontstyle)
+    else:
+        for ii, s in enumerate(subjects):
+            y = np.mean(data[2, ii])
+            ax.axhline(y, c=colors[s], linestyle='--', lw=1)
+        ax.set_ylabel('Accuracy', **axes_label_fontstyle)
     ax.set_title(task, **axes_label_fontstyle)
     ax.set_ylim([None, ymax])
-    if ymax is not None and ymax < 3:
+    if ymax == 1:
+        ax.set_yticks([0, .5, 1])
+        ax.set_yticklabels([0, .5, 1])
+    elif ymax == .5:
+        ax.set_yticks([0, .25, .5])
+    elif ymax is not None and ymax < 3:
         ax.set_yticks([1, 2])
     elif ymax is not None and ymax < 10:
         ax.set_yticks([1, 5, 9])
