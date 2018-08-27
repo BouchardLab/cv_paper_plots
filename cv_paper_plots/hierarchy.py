@@ -12,7 +12,8 @@ from .style import (subjects, subject_labels, subject_colors,
 
 
 def create_dendrogram(features, labels, color_threshold=None,
-                      title=None, save_path=None, ax=None):
+                      title=None, save_path=None, ax=None,
+                      deep=True):
     """
     Create dendrogram from data X. Averages over labels y.
     """
@@ -35,10 +36,16 @@ def create_dendrogram(features, labels, color_threshold=None,
     old_idx = []
     for cv in r['ivl']:
         old_idx.append(labels.index(cv))
-    groups = {'green': old_idx[0:13],
-              'red': old_idx[13:25],
-              'blue': old_idx[25:36],
-              'black': old_idx[36:57]}
+    if deep:
+        groups = {'green': old_idx[0:13],
+                  'red': old_idx[13:25],
+                  'blue': old_idx[25:36],
+                  'black': old_idx[36:57]}
+    else:
+        groups = {'red': old_idx[0:12],
+                  'green': old_idx[12:25],
+                  'blue': old_idx[25:34],
+                  'black': old_idx[34:57]}
 
     if color_threshold is not None:
         r = cluster.hierarchy.dendrogram(z, labels=labels,
@@ -48,10 +55,10 @@ def create_dendrogram(features, labels, color_threshold=None,
     return z, r
 
 
-def plot_dendrogram(yhs, threshold, cvs, max_d, ax):
+def plot_dendrogram(yhs, threshold, cvs, max_d, ax, deep=False):
     ax.axhline(threshold, 0, 1, linestyle='--', c='gray', lw=1)
 
-    z, r = create_dendrogram(yhs, cvs, threshold, ax=ax)
+    z, r = create_dendrogram(yhs, cvs, threshold, ax=ax, deep=deep)
     ax.set_xticks([])
     ax.set_ylabel('Distance', labelpad=0, **axes_label_fontstyle)
     ax.set_ylim(None, max_d)
@@ -88,12 +95,13 @@ def plot_cv_accuracy(cv_accuracy, ax):
     ax.set_ylim(np.array([0, 57])-.5)
     ax.set_yticks([])
     ax.set_xticks([0, .5])
+    ax.set_xlim(0, .75)
     ax.set_xticklabels([0, .5])
     ax.tick_params(**tickparams_fontstyle)
     ax.set_xlabel('Accuracy', labelpad=0, **axes_label_fontstyle)
 
 
-def plot_soft_confusion(yhs, r, f, ax, cax):
+def plot_soft_confusion(yhs, r, f, ax, cax, deep=True):
     im = ax.imshow(yhs, cmap='gray_r', interpolation='nearest',
             vmin=0, vmax=yhs.max())
     ax.set_xticks(np.linspace(0, 56, 57))
@@ -117,7 +125,10 @@ def plot_soft_confusion(yhs, r, f, ax, cax):
     #ax.tick_params(**tickparams_fontstyle)
 
     c = f.colorbar(im, cax=cax, orientation='horizontal')
-    c.set_ticks([0, .1])
+    if deep:
+        c.set_ticks([0, .1])
+    else:
+        c.set_ticks([0, .4])
     c.ax.tick_params(**tickparams_fontstyle)
 
 
@@ -193,7 +204,7 @@ def load_correlations(folder, files):
         dmjar.append(data[3])
     return dp, dm, dv, dmjar
 
-def plot_correlations(dp, dm, dv, dmjar, ax):
+def plot_correlations(dp, dm, dv, dmjar, ax, deep=True):
 
     box_params = {'notch': False,
                   'sym': '',
@@ -209,23 +220,52 @@ def plot_correlations(dp, dm, dv, dmjar, ax):
 
     data = [np.concatenate(x) for x in [dv, dm, dp, dmjar]]
 
-    def draw_sig(ax, x, y0, y1, n_stars):
+    def draw_sig(ax, x, y0, y1, n_stars, right=False):
         fraction = .2 / (y1 - y0)
+        if right:
+            fraction = -fraction
+            offset = .03
+        else:
+            offset = -.03
         ax.annotate("", xy=(x, y0), xycoords='data',
         xytext=(x, y1), textcoords='data',
         arrowprops=dict(arrowstyle="-", ec='k',
         connectionstyle="bar,fraction={}".format(fraction)))
-        ax.text(x-.0325, .5 * (y0 + y1), n_stars*'⁎', fontsize=ticklabel_fontstyle['fontsize'],
+        ax.text(x+offset, .5 * (y0 + y1), n_stars*'⁎', fontsize=ticklabel_fontstyle['fontsize'],
                 verticalalignment='center')
 
-    if wilcoxon(np.concatenate(dmjar), np.concatenate(dp))[1] * 4 < 1e-10:
-        draw_sig(ax, .15, 2, 3, 2)
-    if wilcoxon(np.concatenate(dp), np.concatenate(dm))[1] * 4 < 1e-10:
-        draw_sig(ax, -.03, 1, 2, 2)
-    if wilcoxon(np.concatenate(dmjar), np.concatenate(dm))[1] * 4 < 1e-10:
-        draw_sig(ax, -.06, 1, 3, 2)
-    if ttest_1samp(np.concatenate(dv), 0)[1] * 4 < 1e-4:
-        ax.text(-.07, 0, '⁎', fontsize=ticklabel_fontstyle['fontsize'], verticalalignment='center')
+    if not (ttest_1samp(np.concatenate(dmjar), 0)[1] * 4 < .05):
+        raise ValueError
+    if not (ttest_1samp(np.concatenate(dp), 0)[1] * 4 < .05):
+        raise ValueError
+    if not (ttest_1samp(np.concatenate(dm), 0)[1] * 4 < .05):
+        raise ValueError
+    if not (ttest_1samp(np.concatenate(dv), 0)[1] * 4 < .05):
+        raise ValueError
+    if deep:
+        if wilcoxon(np.concatenate(dmjar), np.concatenate(dp))[1] * 4 < 1e-10:
+            draw_sig(ax, .15, 2, 3, 2)
+            if not (ttest_1samp(np.concatenate(dmjar), 0)[1] * 4 < .05):
+                raise ValueError
+        if wilcoxon(np.concatenate(dp), np.concatenate(dm))[1] * 4 < 1e-10:
+            draw_sig(ax, -.03, 1, 2, 2)
+            if not (ttest_1samp(np.concatenate(dp), 0)[1] * 4 < .05):
+                raise ValueError
+        if wilcoxon(np.concatenate(dmjar), np.concatenate(dm))[1] * 4 < 1e-10:
+            draw_sig(ax, -.06, 1, 3, 2)
+            if not (ttest_1samp(np.concatenate(dm), 0)[1] * 4 < .05):
+                raise ValueError
+        if ttest_1samp(np.concatenate(dv), 0)[1] * 4 < 1e-4:
+            ax.text(-.07, 0, '⁎', fontsize=ticklabel_fontstyle['fontsize'], verticalalignment='center')
+    else:
+        if wilcoxon(np.concatenate(dmjar), np.concatenate(dp))[1] * 4 < 1e-10:
+            draw_sig(ax, .095, 2, 3, 2)
+        if wilcoxon(np.concatenate(dp), np.concatenate(dm))[1] * 4 < 1e-10:
+            draw_sig(ax, .33, 1, 2, 2, right=True)
+        if wilcoxon(np.concatenate(dmjar), np.concatenate(dm))[1] * 4 < 1e-10:
+            draw_sig(ax, -.06, 1, 3, 2)
+        if ttest_1samp(np.concatenate(dv), 0)[1] * 4 < 1e-4:
+            ax.text(-.07, 0, '⁎', fontsize=ticklabel_fontstyle['fontsize'], verticalalignment='center')
     bp = ax.boxplot(data, **box_params)
     ax.set_xlim([-.1, .65])
     ax.set_xlabel('Correlation Coefficient', **axes_label_fontstyle)

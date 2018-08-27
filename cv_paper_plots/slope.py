@@ -92,6 +92,8 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
         lm = ols(formula, df)
         fit = lm.fit()
         print(fit.summary())
+        for table in fit.summary().tables:
+            print(table.as_latex_tabular())
 
 
     ax0.set_xlim(.45, 1.05)
