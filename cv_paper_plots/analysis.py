@@ -186,19 +186,37 @@ def conf_mat2accuracy(c_mat=None, v_mat=None, cv_mat=None):
     accuracy_per_cv = None
     p_accuracy = None
     m_accuracy = None
+    cv_sens = None
+    cv_spec = None
+    cv_prec = None
+    cv_f1 = None
 
     if cv_mat is not None:
-        accuracy_per_cv = np.zeros((len(cv_mat), 57))
+        cv_sens = np.zeros((len(cv_mat), 57))
+        cv_spec = np.zeros((len(cv_mat), 57))
+        cv_prec = np.zeros((len(cv_mat), 57))
         p_right = np.zeros(len(cv_mat))
         m_right = np.zeros(len(cv_mat))
         p_wrong = np.zeros(len(cv_mat))
         m_wrong = np.zeros(len(cv_mat))
         for ii, cvf in enumerate(cv_mat):
             for jj in range(57):
-                if cvf[jj].sum() > 0:
-                    accuracy_per_cv[ii,jj] = cvf[jj,jj]/cvf[jj].sum()
+                TP = cvf[jj, jj]
+                FN = cvf[jj].sum() - TP
+                TN = (cvf.sum() - cvf[jj].sum() - cvf[:, jj].sum() + cvf[jj, jj])
+                FP = cvf.sum() - cvf[jj].sum() - TN
+                if (TP + FN) > 0:
+                    cv_sens[ii,jj] = TP / (TP + FN)
                 else:
-                    accuracy_per_cv[ii,jj] = np.nan
+                    cv_sens[ii,jj] = np.nan
+                if (TN + FP) > 0:
+                    cv_spec[ii, jj] = TN / (TN + FP)
+                else:
+                    cv_spec[ii, jj] = np.nan
+                if (TP + FP) > 0.:
+                    cv_prec[ii, jj] = TP / (TP + FP)
+                else:
+                    cv_prec[ii, jj] = np.nan
             for y in range(57):
                 for y_hat in range(57):
                     pval = place_equiv(y, y_hat)
@@ -211,6 +229,12 @@ def conf_mat2accuracy(c_mat=None, v_mat=None, cv_mat=None):
                         m_right[ii] += cvf[y, y_hat]
                     elif mval == False:
                         m_wrong[ii] += cvf[y, y_hat]
+        accuracy_per_cv = cv_sens
+        cv_f1 = np.nanmean((2. * (cv_prec * cv_spec) / (cv_prec + cv_spec)),
+                           axis=-1)
+        cv_prec = np.nanmean(cv_prec, axis=-1)
+        cv_sens = np.nanmean(cv_sens, axis=-1)
+        cv_spec = np.nanmean(cv_spec, axis=-1)
         p_accuracy = p_right / (p_right + p_wrong)
         m_accuracy = m_right / (m_right + m_wrong)
 
@@ -223,8 +247,9 @@ def conf_mat2accuracy(c_mat=None, v_mat=None, cv_mat=None):
         for ii, vf in enumerate(v_mat):
             v_accuracy[ii] = np.diag(vf).sum()/vf.sum()
 
-    return (c_accuracy, v_accuracy, accuracy_per_cv,
-            p_accuracy, m_accuracy)
+    return ((c_accuracy, v_accuracy, accuracy_per_cv,
+             p_accuracy, m_accuracy),
+            (cv_sens, cv_spec, cv_prec, cv_f1))
 
 def indx_dict2reduced_cv_conf_mat(indices_dicts, y_dim):
     cv_dim = y_dim
