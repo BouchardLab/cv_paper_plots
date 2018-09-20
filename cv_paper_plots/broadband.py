@@ -1,7 +1,9 @@
 import numpy as np
+import scipy as sp
 
 def new_ch_idx(old_idx, good_channels):
     return (np.array(good_channels) == old_idx).argmax()
+
 
 def forward_bl(X, bl_type, block_labels):
     blocks = set(block_labels)
@@ -17,6 +19,7 @@ def forward_bl(X, bl_type, block_labels):
             raise ValueError
     return X, means
 
+
 def invert_bl(X, bl_type, means, block_labels):
     blocks = set(block_labels)
     for ii, block in enumerate(blocks):
@@ -28,3 +31,15 @@ def invert_bl(X, bl_type, means, block_labels):
         else:
             raise ValueError
     return X
+
+
+def get_pcs(d, center_pca):
+    mean = d.mean(axis=0)
+    if center_pca:
+        d = (d - mean) / np.sqrt(d.shape[0])
+    return sp.linalg.eigh(d.T.dot(d), eigvals=(39-2, 39)), mean
+
+
+def flip(pcs):
+    fl = 2 * (abs(pcs.max(axis=-1, keepdims=True)) >= abs(pcs.min(axis=-1, keepdims=True))) -1
+    return fl * pcs
