@@ -78,7 +78,7 @@ def get_cv_idxs(y, good_examples):
     return cv_idxs, n_cv
 
 
-def save_power(f, channel, cv, subject):
+def save_power(f, channel, cv, subject, bb=False):
     """Save the power spectrum matrix.
 
     Parameters
@@ -91,91 +91,171 @@ def save_power(f, channel, cv, subject):
     subject : str
         Subject name for file name.
     """
-    y = f['y'].value
-    good_examples, good_channels = good_examples_and_channels(f['X0'].value)
-    good_channels = np.nonzero(good_channels)[0].tolist()
-    assert channel in good_channels
-    n_time = f['X0'].shape[-1]
-    cv_idx = f['tokens'].value.astype('str').tolist().index(cv)
-    batch_idxs = np.nonzero(np.equal(y, cv_idx) * good_examples)[0].tolist()
-    power_data = np.zeros((40, 258))
-    for ii in range(40):
-        power_data[ii] = np.nanmean(f['X{}'.format(ii)][batch_idxs][:, channel], axis=0)
-    np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                          '{}_{}_{}_power.npz'.format(subject, cv, channel)), **{'power_data': power_data})
-
-
-def save_correlations(f, subject, channel=None):
-    good_examples, good_channels = good_examples_and_channels(f['X0'].value)
-    n_time = f['X0'].shape[-1]
-    assert plot_idx[-1] <= n_time
-    n_time = plot_idx[-1]
-
-    vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
-    vsmc_electrodes = np.zeros(256)
-    vsmc_electrodes[vsmc] = 1
-
-    good_examples = np.nonzero(good_examples)[0].tolist()
-
-    good_channels = np.nonzero(vsmc_electrodes * good_channels)[0].tolist()
-    if channel is not None:
+    if bb:
+        y = f['y']
+        X = f['X']
+        tokens = f['tokens']
+        pcs = f['pcs']
+        pc0s = pcs[:, 0]
+        n_time = X.shape[-1]
+        cv_idx = tokens.index(cv)
+        batch_idxs = np.nonzero(np.equal(y, cv_idx))[0].tolist()
+        power_data = np.nanmean(X[:, batch_idxs][:, :, channel], axis=1)
+        print(X.shape, pc0s.shape, power_data.shape)
+        power_proj = pc0s[channel].dot(power_data)
+        print(power_proj.shape)
+        power_data[:29] -= pc0s[channel][:29, np.newaxis] * power_proj[np.newaxis]
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_{}_{}_power_bb.npz'.format(subject, cv, channel)), **{'power_data': power_data})
+    else:
+        y = f['y'].value
+        good_examples, good_channels = good_examples_and_channels(f['X0'].value)
+        good_channels = np.nonzero(good_channels)[0].tolist()
         assert channel in good_channels
-        good_channels = [channel]
+        n_time = f['X0'].shape[-1]
+        cv_idx = f['tokens'].value.astype('str').tolist().index(cv)
+        batch_idxs = np.nonzero(np.equal(y, cv_idx) * good_examples)[0].tolist()
+        power_data = np.zeros((40, 258))
+        for ii in range(40):
+            power_data[ii] = np.nanmean(f['X{}'.format(ii)][batch_idxs][:, channel], axis=0)
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_{}_{}_power.npz'.format(subject, cv, channel)), **{'power_data': power_data})
 
-    cv_idxs, n_cv = get_cv_idxs(f['y'].value, good_examples)
 
-    n_ch = len(good_channels)
-    n_ex = len(good_examples)
+def save_correlations(f, subject, channel=None, bb=False):
+    if bb:
+        y = f['y']
+        X = f['X']
+        tokens = f['tokens']
+        pcs = f['pcs']
+        pc0s = pcs[:, 0]
+        n_time = X.shape[-1]
+        assert plot_idx[-1] <= n_time
+        n_time = plot_idx[-1]
 
-    def normalize(a):
-        a -= np.mean(a, axis=-1, keepdims=True)
-        a /= np.linalg.norm(a, axis=-1, keepdims=True)
-        return a
+        n_ch = X.shape[2]
+        n_ex = X.shape[1]
 
-    hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
-                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
-    b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
-                             bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
-    hb_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][3],
-                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
-    b_bands = np.logical_or(b_bands, hb_bands)
-    b_bands = range(10, 21)
+        cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
 
-    xcorr_freq = np.zeros((40, n_cv, n_ch))
-    hg_ts = np.zeros((hg_bands.sum(), n_cv, n_ch, n_time))
-    for ii, c in enumerate(np.nonzero(hg_bands)[0]):
+        def normalize(a):
+            a -= np.mean(a, axis=-1, keepdims=True)
+            a /= np.linalg.norm(a, axis=-1, keepdims=True)
+            return a
+
+        hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
+                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
+        b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
+                                 bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
+        hb_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][3],
+                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
+        b_bands = np.logical_or(b_bands, hb_bands)
+        b_bands = range(10, 21)
+
+        xcorr_freq = np.zeros((40, n_cv, n_ch))
+        hg_ts = np.zeros((n_cv, n_ch, n_time))
+        X_hg = X[np.nonzero(hg_bands)[0]]
         for jj, idxs in enumerate(cv_idxs):
-            hg_ts[ii, jj] = f['X{}'.format(c)][idxs][:, good_channels].mean(axis=0)[..., s]
-    hg_ts = np.mean(hg_ts, axis=0)
-    hg_ts = normalize(hg_ts)
+                hg_ts[jj] = X_hg[:, idxs].mean(axis=(0, 1))[..., s]
+        hg_ts = normalize(hg_ts)
 
-    for ii in range(40):
+        b_ts = np.zeros((n_cv, n_ch, n_time))
         for jj, idxs in enumerate(cv_idxs):
-            other_ts = normalize(f['X{}'.format(ii)][idxs][:, good_channels].mean(axis=0)[..., s])
-            xcorr_freq[ii, jj] = np.sum(hg_ts[jj] * other_ts, axis=-1)
+            other_ts = X[:, idxs].mean(axis=1)[..., s]
+            power_proj = (pc0s.T[..., np.newaxis] * other_ts).sum(axis=0)
+            other_ts[:29] -= pc0s.T[..., np.newaxis][:29] * power_proj[np.newaxis]
+            b_ts[jj] = other_ts[b_bands].mean(axis=0)
+            other_ts = normalize(other_ts)
+            xcorr_freq[:, jj] = np.sum(hg_ts[jj][np.newaxis] * other_ts, axis=-1)
+        b_ts = normalize(b_ts)
 
-    b_ts = np.zeros((len(b_bands), n_cv, n_ch, n_time))
-    for ii, c in enumerate(b_bands):
-        for jj, idxs in enumerate(cv_idxs):
-            b_ts[ii, jj] = f['X{}'.format(c)][idxs][:, good_channels].mean(axis=0)[..., s]
-    b_ts = np.mean(b_ts, axis=0)
-    b_ts = normalize(b_ts)
-    ones = np.ones_like(hg_ts[0, 0])
-    n_overlap = np.correlate(ones, ones, mode='full')
-    xcorr_time = np.zeros((n_overlap.size, n_cv, n_ch))
-    acorr_time = np.zeros((2, n_overlap.size, n_cv, n_ch))
-    for ii in range(n_cv):
-        for jj in range(n_ch):
-            hg = hg_ts[ii, jj]
-            b = b_ts[ii, jj]
-            xcorr_time[:, ii, jj] = np.correlate(hg, b, mode='full')
-            acorr_time[0, :, ii, jj] = np.correlate(hg, hg, mode='full')
-            acorr_time[1, :, ii, jj] = np.correlate(b, b, mode='full')
+        ones = np.ones_like(hg_ts[0, 0])
+        n_overlap = np.correlate(ones, ones, mode='full')
+        xcorr_time = np.zeros((n_overlap.size, n_cv, n_ch))
+        acorr_time = np.zeros((2, n_overlap.size, n_cv, n_ch))
+        for ii in range(n_cv):
+            for jj in range(n_ch):
+                hg = hg_ts[ii, jj]
+                b = b_ts[ii, jj]
+                xcorr_time[:, ii, jj] = np.correlate(hg, b, mode='full')
+                #acorr_time[0, :, ii, jj] = np.correlate(hg, hg, mode='full')
+                #acorr_time[1, :, ii, jj] = np.correlate(b, b, mode='full')
 
-    np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                          '{}_correlations.npz'.format(subject)), **{'xcorr_freq': xcorr_freq,
-                                                                           'xcorr_time': xcorr_time,
-                                                                    'acorr_time': acorr_time})
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_correlations_bb.npz'.format(subject)), **{'xcorr_freq': xcorr_freq,
+                                                                         'xcorr_time': xcorr_time,
+                                                                         'acorr_time': acorr_time})
+    else:
+        good_examples, good_channels = good_examples_and_channels(f['X0'].value)
+        n_time = f['X0'].shape[-1]
+        assert plot_idx[-1] <= n_time
+        n_time = plot_idx[-1]
+
+        vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
+        vsmc_electrodes = np.zeros(256)
+        vsmc_electrodes[vsmc] = 1
+
+        good_examples = np.nonzero(good_examples)[0].tolist()
+
+        good_channels = np.nonzero(vsmc_electrodes * good_channels)[0].tolist()
+        if channel is not None:
+            assert channel in good_channels
+            good_channels = [channel]
+
+        cv_idxs, n_cv = get_cv_idxs(f['y'].value, good_examples)
+
+        n_ch = len(good_channels)
+        n_ex = len(good_examples)
+
+        def normalize(a):
+            a -= np.mean(a, axis=-1, keepdims=True)
+            a /= np.linalg.norm(a, axis=-1, keepdims=True)
+            return a
+
+        hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
+                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
+        b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
+                                 bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
+        hb_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][3],
+                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
+        b_bands = np.logical_or(b_bands, hb_bands)
+        b_bands = range(10, 21)
+
+        xcorr_freq = np.zeros((40, n_cv, n_ch))
+        hg_ts = np.zeros((hg_bands.sum(), n_cv, n_ch, n_time))
+        for ii, c in enumerate(np.nonzero(hg_bands)[0]):
+            for jj, idxs in enumerate(cv_idxs):
+                hg_ts[ii, jj] = f['X{}'.format(c)][idxs][:, good_channels].mean(axis=0)[..., s]
+        hg_ts = np.mean(hg_ts, axis=0)
+        hg_ts = normalize(hg_ts)
+
+        for ii in range(40):
+            for jj, idxs in enumerate(cv_idxs):
+                other_ts = normalize(f['X{}'.format(ii)][idxs][:, good_channels].mean(axis=0)[..., s])
+                xcorr_freq[ii, jj] = np.sum(hg_ts[jj] * other_ts, axis=-1)
+
+        b_ts = np.zeros((len(b_bands), n_cv, n_ch, n_time))
+        for ii, c in enumerate(b_bands):
+            for jj, idxs in enumerate(cv_idxs):
+                b_ts[ii, jj] = f['X{}'.format(c)][idxs][:, good_channels].mean(axis=0)[..., s]
+        b_ts = np.mean(b_ts, axis=0)
+        b_ts = normalize(b_ts)
+        ones = np.ones_like(hg_ts[0, 0])
+        n_overlap = np.correlate(ones, ones, mode='full')
+        xcorr_time = np.zeros((n_overlap.size, n_cv, n_ch))
+        acorr_time = np.zeros((2, n_overlap.size, n_cv, n_ch))
+        for ii in range(n_cv):
+            for jj in range(n_ch):
+                hg = hg_ts[ii, jj]
+                b = b_ts[ii, jj]
+                xcorr_time[:, ii, jj] = np.correlate(hg, b, mode='full')
+                acorr_time[0, :, ii, jj] = np.correlate(hg, hg, mode='full')
+                acorr_time[1, :, ii, jj] = np.correlate(b, b, mode='full')
+
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_correlations.npz'.format(subject)), **{'xcorr_freq': xcorr_freq,
+                                                                               'xcorr_time': xcorr_time,
+                                                                        'acorr_time': acorr_time})
 def save_time_correlations(f, subject, channel=None):
     good_examples, good_channels = good_examples_and_channels(f['X0'].value)
     n_time = f['X0'].shape[-1]
@@ -233,33 +313,58 @@ def save_time_correlations(f, subject, channel=None):
                           '{}_time_correlations.npz'.format(subject)), **{'xcorr_time': xcorr_time})
 
 
-def save_hg_power(f, subject):
-    vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
-    vsmc_electrodes = np.zeros(256)
-    vsmc_electrodes[vsmc] = 1
+def save_hg_power(f, subject, bb=False):
+    if bb:
+        y = f['y']
+        X = f['X']
+        tokens = f['tokens']
+        pcs = f['pcs']
+        pc0s = pcs[:, 0]
+        n_time = X.shape[-1]
+        assert plot_idx[-1] <= n_time
+        n_time = plot_idx[-1]
 
-    good_examples, good_channels = good_examples_and_channels(f['X0'].value)
-    good_channels = np.nonzero(vsmc_electrodes * good_channels)[0].tolist()
-    n_time = f['X0'].shape[-1]
+        n_ch = X.shape[2]
+        n_ex = X.shape[1]
 
-    good_examples = np.nonzero(good_examples)[0].tolist()
+        cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
 
-    cv_idxs, n_cv = get_cv_idxs(f['y'].value, good_examples)
+        hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
+                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
+        hg_bands = np.nonzero(hg_bands)[0].tolist()
 
-    hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
-                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
-    hg_bands = np.nonzero(hg_bands)[0].tolist()
-
-    power_data = np.zeros((len(hg_bands), n_cv, len(good_channels), n_time))
-    for ii, c in enumerate(hg_bands):
+        power_data = np.zeros((n_cv, n_ch, n_time))
         for jj, idxs in enumerate(cv_idxs):
-            power_data[ii, jj] = f['X{}'.format(c)][idxs][:, good_channels].mean(axis=0)
-    power_data = power_data.mean(axis=0)
-    np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                          '{}_hg_power.npz'.format(subject)), **{'power_data': power_data})
+            power_data[jj] = X[hg_bands][:, idxs].mean(axis=(0, 1))[..., s]
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power_bb.npz'.format(subject)), **{'power_data': power_data})
+    else:
+        vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
+        vsmc_electrodes = np.zeros(256)
+        vsmc_electrodes[vsmc] = 1
+
+        good_examples, good_channels = good_examples_and_channels(f['X0'].value)
+        good_channels = np.nonzero(vsmc_electrodes * good_channels)[0].tolist()
+        n_time = f['X0'].shape[-1]
+
+        good_examples = np.nonzero(good_examples)[0].tolist()
+
+        cv_idxs, n_cv = get_cv_idxs(f['y'].value, good_examples)
+
+        hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
+                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
+        hg_bands = np.nonzero(hg_bands)[0].tolist()
+
+        power_data = np.zeros((len(hg_bands), n_cv, len(good_channels), n_time))
+        for ii, c in enumerate(hg_bands):
+            for jj, idxs in enumerate(cv_idxs):
+                power_data[ii, jj] = f['X{}'.format(c)][idxs][:, good_channels].mean(axis=0)
+        power_data = power_data.mean(axis=0)
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power.npz'.format(subject)), **{'power_data': power_data})
 
 
-def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
+def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False):
     """Plot the power spectrum matrix.
 
     Parameters
@@ -273,10 +378,15 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
     """
     ax0, ax1 = axes
     axes = [ax for ax in axes if (ax is not None)]
-    power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                          '{}_{}_{}_power.npz'.format(subject, cv, channel)))['power_data']
+    if bb:
+        power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_{}_{}_power_bb.npz'.format(subject, cv, channel)))['power_data']
+    else:
+        power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_{}_{}_power.npz'.format(subject, cv, channel)))['power_data']
 
     if ax0 is not None:
+        print(power_data[::-1, s].min(), power_data[::-1, s].max())
         im = ax0.imshow(power_data[::-1, s], interpolation='nearest', cmap='afmhot',
                         aspect='auto', vmin=vmin, vmax=vmax)
         yticklabels = [5, 25, 75]
@@ -327,15 +437,20 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None):
     return im
 
 
-def plot_correlations(subjects, ax, kind='freq'):
+def plot_correlations(subjects, ax, kind='freq', bb=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
     for subject in subjects:
         c = subject_colors[subject]
-        d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                    '{}_correlations.npz'.format(subject)))
-        xcorr_freq = d['xcorr_freq']
-        xcorr_time = d['xcorr_time']
+        if bb:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb.npz'.format(subject)))
+            xcorr_freq = d['xcorr_freq']
+        else:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations.npz'.format(subject)))
+            xcorr_freq = d['xcorr_freq']
+            xcorr_time = d['xcorr_time']
 
         if kind == 'freq':
             mean = xcorr_freq.mean(axis=(1, 2))
@@ -402,17 +517,23 @@ def plot_time_correlations(subjects, ax):
     ax.tick_params(**tickparams_fontstyle)
 
 
-def plot_correlation_histogram(subjects, ax, cs=None):
+def plot_correlation_histogram(subjects, ax, cs=None, bb=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
         cs = len(subjects) * [cs]
 
     for subject, c in zip(subjects, cs):
-        d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                    '{}_correlations.npz'.format(subject)))
+        if bb:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb.npz'.format(subject)))
+            power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_bb.npz'.format(subject)))['power_data']
+        else:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations.npz'.format(subject)))
+            power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power.npz'.format(subject)))['power_data']
         xcorr_time = d['xcorr_time']
-        power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                              '{}_hg_power.npz'.format(subject)))['power_data']
         power_data_not_flat = np.mean(power_data[..., hg_power_s], axis=-1)
         power_data = power_data_not_flat.ravel()
 
@@ -440,14 +561,18 @@ def plot_correlation_histogram(subjects, ax, cs=None):
     ax.tick_params(**tickparams_fontstyle)
 
 
-def plot_power_histogram(subjects, ax, cs=None):
+def plot_power_histogram(subjects, ax, cs=None, bb=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
         cs = len(subjects) * [cs]
 
     for subject, c in zip(subjects, cs):
-        d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                    '{}_correlations.npz'.format(subject)))
+        if bb:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb.npz'.format(subject)))
+        else:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations.npz'.format(subject)))
         xcorr_time = d['xcorr_time']
         power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power.npz'.format(subject)))['power_data']
