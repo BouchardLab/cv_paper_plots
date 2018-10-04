@@ -18,7 +18,7 @@ def new_ch_idx(old_idx, good_channels):
 
 
 def forward_bl(X, bl_type, bl_mean, bl_std, block_labels):
-    blocks = set(block_labels)
+    blocks = sorted(set(block_labels))
     means = np.full((X.shape[0], len(blocks), X.shape[2], 1), np.nan)
     for ii, block in enumerate(blocks):
         idxs = block_labels == block
@@ -36,7 +36,7 @@ def forward_bl(X, bl_type, bl_mean, bl_std, block_labels):
 
 
 def invert_bl(X, bl_type, means, bl_mean, bl_std, block_labels):
-    blocks = set(block_labels)
+    blocks = sorted(set(block_labels))
     for ii, block in enumerate(blocks):
         idxs = block_labels == block
         if bl_type == 'bl_mean':
