@@ -1,5 +1,41 @@
+import h5py
 import numpy as np
 import scipy as sp
+from matplotlib import cm
+from sklearn.linear_model import (RANSACRegressor, TheilSenRegressor,
+                                  HuberRegressor)
+
+from ecog.utils import bands
+from .xfreq_analysis import good_examples_and_channels
+
+
+
+def load_data(fname):
+    baselines = dict()
+    with h5py.File(fname) as f:
+        block_labels = f['block'].value
+        for key, value in f.items():
+            if ('block' in key) and ('band' in key):
+                items = key.split('_')
+                block, band = int(items[2]), int(items[4])
+                baselines[(block, band)] = np.squeeze(value.value).astype('float32')
+        good_examples, good_channels = good_examples_and_channels(f['X0'].value)
+        vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
+        vsmc_electrodes = np.zeros(256)
+        vsmc_electrodes[vsmc] = 1
+        tokens = f['tokens'].value.astype('str').tolist()
+
+        good_examples = sorted(np.nonzero(good_examples)[0].tolist())
+
+        good_channels = sorted(np.nonzero(vsmc_electrodes * good_channels)[0].tolist())
+        n_trials, n_channels, n_time = f['X0'].shape
+        print(len(good_examples), len(good_channels))
+        X = np.zeros((40, len(good_examples), len(good_channels), n_time), dtype='float32')
+        block_labels = block_labels[good_examples]
+        for ii in range(40):
+            X[ii] = f['X{}'.format(ii)][good_examples][:, good_channels]
+        labels = f['y'][good_examples]
+    return X, baselines, good_examples, good_channels, tokens, block_labels, labels
 
 
 def baseline_mean_std(block_labels, good_channels, baselines):
@@ -62,5 +98,122 @@ def flip(pcs):
     fl = 2 * (abs(pcs.max(axis=-1, keepdims=True)) >= abs(pcs.min(axis=-1, keepdims=True))) -1
     return fl * pcs
 
-def remove_pc1(X, pcs, baselines):
-    pass
+
+def log_log_robust_regression(cfs, y, kind=0):
+    assert y.shape[0] == 40
+    y = y.reshape(40, -1)
+    x = np.tile(cfs[:, np.newaxis], (1, y.shape[1]))
+    y = np.log(y).ravel()
+    x = np.log(x).ravel()[:, np.newaxis]
+    if kind == 0:
+        model = RANSACRegressor()
+    elif kind == 1:
+        model = TheilSenRegressor(n_jobs=-1)
+    elif kind == 2:
+        model = HuberRegressor()
+    else:
+        raise ValueError
+    model.fit(x, y)
+    yp = model.predict(x)
+    u = np.square(y - yp)
+    v = np.square(y - y.mean())
+    R2 = 1. - u/v
+    if kind == 0:
+        return model.estimator_.coef_, model.estimator_.intercept_, np.median(R2)
+    elif kind in [1, 2]:
+        return model.coef_, model.intercept_, np.median(R2)
+    else:
+        raise ValueError
+
+
+def calculate_baselines(cfs, X, labels=None, kind=2, comm=None):
+    if labels is not None:
+        cvs = sorted(set(labels))
+        bls = np.full((len(cvs), X.shape[2], X.shape[3], 2), np.nan)
+        medR2 = np.full((len(cvs), X.shape[2], X.shape[3]), np.nan)
+        for ii, cv in enumerate(cvs):
+            print(ii, cv)
+            idxs = np.where(labels == cv)[0]
+            Xp = X[:, idxs].mean(axis=1)
+            for ch in range(X.shape[2]):
+                for tt in range(X.shape[3]):
+                    rval = log_log_robust_regression(cfs, Xp[:, ch, tt], kind)
+                    bls[ii, ch, tt] = rval[:2]
+                    medR2[ii, ch, tt] = rval[2]
+        return bls, medR2
+    else:
+        shape = X.shape[1:]
+        bls = np.full((np.prod(shape), 2,), np.nan)
+        medR2 = np.full(np.prod(shape), np.nan)
+        for ii, Xp in enumerate(X.reshape(X.shape[0], -1).T):
+            rval = log_log_robust_regression(cfs, Xp, kind)
+            bls[ii] = rval[:2]
+            medR2[ii] = rval[2]
+    return bls.reshape(shape + (2,)), medR2.reshape(shape)
+
+
+def fit_power_estimate(cfs, m, b):
+    for ii in range(m.ndims-1):
+        cfs = cfs[..., np.newaxis]
+    cfs = np.log(cfs)
+    m = m[np.newaxis]
+    b = b[np.newaxis]
+    return np.exp(m * cfs + b)
+
+def correlate_ts(x, y):
+    xm = x - x.mean(axis=-1, keepdims=True)
+    ym = y - y.mean(axis=-1, keepdims=True)
+    num = (xm * ym).mean(axis=-1)
+    den = xm.std(axis=-1) * ym.std(axis=-1)
+    return (num / den)
+
+
+def auto_corr(X, lags=51):
+    df = pd.DataFrame(X.reshape(-1, 258).T)
+    n = df.shape[1]
+    ac = np.zeros(lags)
+    for ii in range(n):
+        for jj in range(lags):
+            ac[jj] += df[ii].autocorr(jj - lags //2) / n
+    return ac
+
+
+def plot_PC1s(pcs, evs, mean, faxes=None, title=False, ylabel=None):
+    if pcs.ndim > 3:
+        pcs = pcs.reshape(-1, 3, 40)
+        mean = mean.reshape(-1, 40)
+        evs = evs.reshape(-1, 3)
+    freqs = bands.chang_lab['cfs']
+    if faxes is None:
+        faxes = plt.subplots(1, 2, figsize=(2.5, 12))
+    f, (ax0, ax1) = faxes
+    ratios = evs[:, 1:]/evs[:, [0]]
+    beta_weights = np.zeros(pcs.shape[0])
+    beta_weights = (pcs[:, 0, 14:20]).sum(axis=-1)
+    beta_weights -= beta_weights.min()
+    beta_weights /= beta_weights.max()
+    for ii, pc in enumerate(pcs):
+        ax0.plot(freqs, pcs[ii, 0],c=cm.Greys(beta_weights[ii]), alpha=1.)
+    ax0.plot(freqs, np.median(pcs[:, 0], axis=0), c='r')
+    ax0.axhline(0, 0, 1, c='blue', ls='--')
+    ax1.errorbar([0, 1], ratios.mean(axis=0), yerr=ratios.std(axis=0),
+                 c='k', ls='none', marker='.')
+    pc0s = pcs[:, 0] / np.linalg.norm(pcs[:, 0], axis=1, keepdims=True)
+    if mean is not None:
+        mean = mean / np.linalg.norm(mean, axis=1, keepdims=True)
+        ips = abs(np.sum(pc0s * mean, axis=1))
+        ax1.errorbar(2, ips.mean(), yerr=ips.std(), c='k', marker='.')
+    #ax0.set_xscale('log')
+    if mean is None:
+        ax1.set_xticks([0, 1])
+        ax1.set_xticklabels([r'$\frac{e_2}{e_1}$', r'$\frac{e_3}{e_1}$'])
+        ax1.set_xlim(-1, 2)
+    else:
+        ax1.set_xticks([0, 1, 2])
+        ax1.set_xticklabels([r'$\frac{e_2}{e_1}$', r'$\frac{e_3}{e_1}$', r'$\mu\cdot V_1$'])
+        ax1.set_xlim(-1, 3)
+    ax1.set_ylim(0, 1.1)
+    ax1.set_yticks([0, 1])
+    if ylabel is not None:
+        ax0.set_ylabel(ylabel)
+    return

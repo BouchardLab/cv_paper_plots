@@ -2,6 +2,7 @@ import h5py, os
 
 import numpy as np
 from scipy import stats
+import pandas as pd
 from sklearn.linear_model import (LinearRegression, HuberRegressor,
                                   RANSACRegressor, TheilSenRegressor)
 
@@ -78,7 +79,7 @@ def get_cv_idxs(y, good_examples):
     return cv_idxs, n_cv
 
 
-def save_power(f, channel, cv, subject, bb=False):
+def save_power(f, channel, cv, subject, bb=False, bb2=False):
     """Save the power spectrum matrix.
 
     Parameters
@@ -91,7 +92,15 @@ def save_power(f, channel, cv, subject, bb=False):
     subject : str
         Subject name for file name.
     """
-    if bb:
+    if bb2:
+        X = f['X']
+        tokens = f['tokens']
+        n_time = X.shape[-1]
+        cv_idx = tokens.index(cv)
+        power_data = X[:, :, channel]
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_{}_{}_power_bb2.npz'.format(subject, cv, channel)), **{'power_data': power_data})
+    elif bb:
         y = f['y']
         X = f['X']
         tokens = f['tokens']
@@ -143,18 +152,9 @@ def save_correlations(f, subject, channel=None, bb=False):
             a /= np.linalg.norm(a, axis=-1, keepdims=True)
             return a
 
-        hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
-                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
-        b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
-                                 bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
-        hb_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][3],
-                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
-        b_bands = np.logical_or(b_bands, hb_bands)
-        b_bands = range(10, 21)
-
         xcorr_freq = np.zeros((40, n_cv, n_ch))
         hg_ts = np.zeros((n_cv, n_ch, n_time))
-        X_hg = X[np.nonzero(hg_bands)[0]]
+        X_hg = extract_hg(X)
         for jj, idxs in enumerate(cv_idxs):
                 hg_ts[jj] = X_hg[:, idxs].mean(axis=(0, 1))[..., s]
         hg_ts = normalize(hg_ts)
@@ -164,7 +164,7 @@ def save_correlations(f, subject, channel=None, bb=False):
             other_ts = X[:, idxs].mean(axis=1)[..., s]
             power_proj = (pc0s.T[..., np.newaxis] * other_ts).sum(axis=0)
             other_ts[:29] -= pc0s.T[..., np.newaxis][:29] * power_proj[np.newaxis]
-            b_ts[jj] = other_ts[b_bands].mean(axis=0)
+            b_ts[jj] = extract_b[other_ts].mean(axis=0)
             other_ts = normalize(other_ts)
             xcorr_freq[:, jj] = np.sum(hg_ts[jj][np.newaxis] * other_ts, axis=-1)
         b_ts = normalize(b_ts)
@@ -329,13 +329,9 @@ def save_hg_power(f, subject, bb=False):
 
         cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
 
-        hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
-                                  bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
-        hg_bands = np.nonzero(hg_bands)[0].tolist()
-
         power_data = np.zeros((n_cv, n_ch, n_time))
         for jj, idxs in enumerate(cv_idxs):
-            power_data[jj] = X[hg_bands][:, idxs].mean(axis=(0, 1))[..., s]
+            power_data[jj] = extract_hg(X)[:, idxs].mean(axis=(0, 1))[..., s]
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_bb.npz'.format(subject)), **{'power_data': power_data})
     else:
@@ -840,3 +836,42 @@ def plot_resolved_power_correlations(subjects, ax, hline_c='gray', bb=False):
     ax.set_ylim(ymin, ymax)
 
     ax.axhline(ymin, 15./60, 29./60, linestyle='-', c='black', lw=3.)
+
+
+def extract_b_hg(X, labels=None):
+    return extract_b(X, labels), extract_hg(X, labels)
+
+
+def extract_b(X, labels=None):
+    hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
+                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
+    b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
+                             bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
+    X_b = X[b_bands]
+    if labels is None:
+        return X_b
+    else:
+        cvs = sorted(set(labels))
+        shape = X_b.shape
+        shapep = (shape[0], len(cvs)) + shape[2:]
+        Xp = np.full(shapep, np.nan)
+        for ii, cv in enumerate(cvs):
+            idxs = np.where(labels == cv)[0]
+            Xp[:, ii] = X_b[:, idxs].mean(axis=1)
+        return Xp
+
+def extract_hg(X, labels=None):
+    hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
+                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
+    X_hg = X[hg_bands]
+    if labels is None:
+        return X_hg
+    else:
+        cvs = sorted(set(labels))
+        shape = X_hg.shape
+        shapep = (shape[0], len(cvs)) + shape[2:]
+        Xp = np.full(shapep, np.nan)
+        for ii, cv in enumerate(cvs):
+            idxs = np.where(labels == cv)[0]
+            Xp[:, ii] = X_hg[:, idxs].mean(axis=1)
+        return Xp
