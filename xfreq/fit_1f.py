@@ -31,7 +31,7 @@ size = comm.size
 
 kind_names = {0: 'RANSAC', 1: 'TheilSen', 2: 'Huber'}
 kind = 2
-folder = os.path.join(os.environ['HOME'],'Development/data/ecog/AA_ff/')
+folder = os.path.join(os.environ['ECOG_DIR'],'jlivezey/processed/AA_ff/')
 subjects = ['ec2', 'ec9', 'gp31', 'gp33']
 files = ['EC2_blocks_1_8_9_15_76_89_105_CV_AA_ff_align_window_-0.5_to_0.79_none.h5',
          'EC9_blocks_15_39_46_49_53_60_63_CV_AA_ff_align_window_-0.5_to_0.79_none.h5',
@@ -96,4 +96,4 @@ for ii in range(n_iter):
         X_bls[start:end] = recv_bls[:end-start]
 
 if rank == 0:
-    np.savez('{}_baselines'.format(subject), X_bls=X_bls, X_medR2=X_medR2, kind=kind)
+    np.savez('{}_bb'.format(subject), X_bls=X_bls, X_medR2=X_medR2, kind=kind)
