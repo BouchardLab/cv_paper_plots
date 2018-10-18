@@ -1,15 +1,10 @@
 import h5py, os, pickle
 import numpy as np
 import scipy as sp
-import matplotlib.pyplot as plt
-from matplotlib import cm
 
 from ecog.utils import bands
-from cv_paper_plots.style import (subject_colors, letter_fontstyle,
-                                  ticklabel_fontstyle, subject_labels)
 
 import scipy as sp
-from cv_paper_plots import xfreq_analysis as xfa
 from cv_paper_plots import broadband
 from cv_paper_plots.xfreq_analysis import good_examples_and_channels
 from cv_paper_plots.broadband import (forward_bl, invert_bl, new_ch_idx, get_pcs, flip,
