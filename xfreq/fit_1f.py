@@ -1,4 +1,4 @@
-import h5py, os, pickle
+import h5py, os, pickle, sys
 import numpy as np
 import scipy as sp
 
@@ -34,12 +34,13 @@ files = ['EC2_blocks_1_8_9_15_76_89_105_CV_AA_ff_align_window_-0.5_to_0.79_none.
          'GP33_blocks_1_5_30_CV_AA_ff_align_window_-0.5_to_0.79_none.h5']
 freqs = bands.chang_lab['cfs']
 
-subject_idx = 0
+subject_idx = int(sys.argv[1])
 subject = subjects[subject_idx]
 
 if rank == 0:
     fname = os.path.join(folder, files[subject_idx])
     X, baselines, good_examples, good_channels, tokens, block_labels, labels = load_data(fname)
+    X[X <= 0.] = X[X > 0.].min()
     bl_mean, bl_std = baseline_mean_std(block_labels, good_channels, baselines)
     shape = X.shape
     n_idxs = shape[1]
@@ -59,7 +60,8 @@ n_idxs = comm.bcast(n_idxs, 0)
 shape = comm.bcast(shape, 0)
 nf = freqs.size
 sub_shape = shape[2:]
-print(shape, sub_shape, n_idxs)
+if rank == 0:
+    print(shape, sub_shape, n_idxs)
 
 for ii in range(n_iter):
     start = ii * size
@@ -68,27 +70,32 @@ for ii in range(n_iter):
     send_x = None
     recv_x = np.empty((nf,) + sub_shape)
     if rank == 0:
+        print('scatter')
         send_x = np.empty((size, nf) + sub_shape)
         axes = list(range(send_x.ndim))
         axes[0:2] = [1, 0]
         send_x[:end-start] = np.transpose(X[:, start:end], axes=axes)
+        print(send_x.shape)
+    print(rank, recv_x.shape)
     comm.Scatter(send_x, recv_x, 0)
     # Fit
     recv_bls = None
     recv_medR2 = None
     if rank == 0:
+       print('gather')
        recv_bls = np.full((size,) + sub_shape + (2,), np.nan)
        recv_medR2 = np.full((size,) + sub_shape, np.nan)
     if start + rank < end:
-        print(start+rank)
         send_bls, send_medR2 = broadband.calculate_baselines(freqs, recv_x, kind=kind)
     else:
         send_bls = np.full(sub_shape + (2,), np.nan)
         send_medR2 = np.full(sub_shape, np.nan)
     comm.Gather(send_bls, recv_bls, 0)
+    comm.Gather(send_medR2, recv_medR2, 0)
     if rank == 0:
         print(float(ii)*size / n_idxs, datetime.now() - time_start)
         X_bls[start:end] = recv_bls[:end-start]
+        X_medR2[start:end] = recv_medR2[:end-start]
 
 if rank == 0:
     np.savez('{}_bb'.format(subject), X_bls=X_bls, X_medR2=X_medR2, kind=kind)
