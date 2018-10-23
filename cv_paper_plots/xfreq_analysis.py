@@ -2,7 +2,6 @@ import h5py, os
 
 import numpy as np
 from scipy import stats
-import pandas as pd
 from sklearn.linear_model import (LinearRegression, HuberRegressor,
                                   RANSACRegressor, TheilSenRegressor)
 
@@ -93,11 +92,14 @@ def save_power(f, channel, cv, subject, bb=False, bb2=False):
         Subject name for file name.
     """
     if bb2:
+        y = f['y']
         X = f['X']
         tokens = f['tokens']
         n_time = X.shape[-1]
         cv_idx = tokens.index(cv)
-        power_data = X[:, :, channel]
+        cv_idx = tokens.index(cv)
+        batch_idxs = np.where(np.equal(y, cv_idx))[0]
+        power_data = X[:, batch_idxs][:, :, channel].mean(axis=1)
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_{}_{}_power_bb2.npz'.format(subject, cv, channel)), **{'power_data': power_data})
     elif bb:
@@ -108,8 +110,8 @@ def save_power(f, channel, cv, subject, bb=False, bb2=False):
         pc0s = pcs[:, 0]
         n_time = X.shape[-1]
         cv_idx = tokens.index(cv)
-        batch_idxs = np.nonzero(np.equal(y, cv_idx))[0].tolist()
-        power_data = np.nanmean(X[:, batch_idxs][:, :, channel], axis=1)
+        batch_idxs = np.where(np.equal(y, cv_idx))[0]
+        power_data = X[:, batch_idxs][:, :, channel].mean(axis=1)
         print(X.shape, pc0s.shape, power_data.shape)
         power_proj = pc0s[channel].dot(power_data)
         print(power_proj.shape)
@@ -131,8 +133,55 @@ def save_power(f, channel, cv, subject, bb=False, bb2=False):
                               '{}_{}_{}_power.npz'.format(subject, cv, channel)), **{'power_data': power_data})
 
 
-def save_correlations(f, subject, channel=None, bb=False):
-    if bb:
+def save_correlations(f, subject, channel=None, bb=False, bb2=False):
+    if bb2:
+        y = f['y']
+        X = f['X']
+        tokens = f['tokens']
+        n_time = X.shape[-1]
+        assert plot_idx[-1] <= n_time
+        n_time = plot_idx[-1]
+
+        n_ch = X.shape[2]
+        n_ex = X.shape[1]
+
+        cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
+
+        def normalize(a):
+            a -= np.mean(a, axis=-1, keepdims=True)
+            a /= np.linalg.norm(a, axis=-1, keepdims=True)
+            return a
+
+        xcorr_freq = np.zeros((40, n_cv, n_ch))
+        hg_ts = np.zeros((n_cv, n_ch, n_time))
+        b_ts, hg_ts = extract_b_hg(X, labels=y)
+        hg_ts = hg_ts.mean(axis=0)[..., s]
+        b_ts = b_ts.mean(axis=0)[..., s]
+        hg_ts = normalize(hg_ts)
+        b_ts = normalize(b_ts)
+
+        for jj, idxs in enumerate(cv_idxs):
+            other_ts = X[:, idxs].mean(axis=1)[..., s]
+            other_ts = normalize(other_ts)
+            xcorr_freq[:, jj] = np.sum(hg_ts[jj][np.newaxis] * other_ts, axis=-1)
+
+        ones = np.ones_like(hg_ts[0, 0])
+        n_overlap = np.correlate(ones, ones, mode='full')
+        xcorr_time = np.zeros((n_overlap.size, n_cv, n_ch))
+        acorr_time = np.zeros((2, n_overlap.size, n_cv, n_ch))
+        for ii in range(n_cv):
+            for jj in range(n_ch):
+                hg = hg_ts[ii, jj]
+                b = b_ts[ii, jj]
+                xcorr_time[:, ii, jj] = np.correlate(hg, b, mode='full')
+                #acorr_time[0, :, ii, jj] = np.correlate(hg, hg, mode='full')
+                #acorr_time[1, :, ii, jj] = np.correlate(b, b, mode='full')
+
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_correlations_bb2.npz'.format(subject)), **{'xcorr_freq': xcorr_freq,
+                                                                         'xcorr_time': xcorr_time,
+                                                                         'acorr_time': acorr_time})
+    elif bb:
         y = f['y']
         X = f['X']
         tokens = f['tokens']
@@ -249,8 +298,8 @@ def save_correlations(f, subject, channel=None, bb=False):
                 hg = hg_ts[ii, jj]
                 b = b_ts[ii, jj]
                 xcorr_time[:, ii, jj] = np.correlate(hg, b, mode='full')
-                acorr_time[0, :, ii, jj] = np.correlate(hg, hg, mode='full')
-                acorr_time[1, :, ii, jj] = np.correlate(b, b, mode='full')
+                #acorr_time[0, :, ii, jj] = np.correlate(hg, hg, mode='full')
+                #acorr_time[1, :, ii, jj] = np.correlate(b, b, mode='full')
 
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_correlations.npz'.format(subject)), **{'xcorr_freq': xcorr_freq,
@@ -313,8 +362,24 @@ def save_time_correlations(f, subject, channel=None):
                           '{}_time_correlations.npz'.format(subject)), **{'xcorr_time': xcorr_time})
 
 
-def save_hg_power(f, subject, bb=False):
-    if bb:
+def save_hg_power(f, subject, bb=False, bb2=False):
+    if bb2:
+        y = f['y']
+        X = f['X']
+        tokens = f['tokens']
+        n_time = X.shape[-1]
+        assert plot_idx[-1] <= n_time
+        n_time = plot_idx[-1]
+
+        n_ch = X.shape[2]
+        n_ex = X.shape[1]
+
+        cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
+
+        power_data = extract_hg(X, labels=y).mean(axis=0)[..., s]
+        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_hg_power_bb2.npz'.format(subject)), **{'power_data': power_data})
+    elif bb:
         y = f['y']
         X = f['X']
         tokens = f['tokens']
@@ -360,7 +425,7 @@ def save_hg_power(f, subject, bb=False):
                               '{}_hg_power.npz'.format(subject)), **{'power_data': power_data})
 
 
-def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False):
+def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False, bb2=True):
     """Plot the power spectrum matrix.
 
     Parameters
@@ -374,7 +439,10 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False):
     """
     ax0, ax1 = axes
     axes = [ax for ax in axes if (ax is not None)]
-    if bb:
+    if bb2:
+        power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                              '{}_{}_{}_power_bb2.npz'.format(subject, cv, channel)))['power_data']
+    elif bb:
         power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_{}_{}_power_bb.npz'.format(subject, cv, channel)))['power_data']
     else:
@@ -383,6 +451,7 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False):
 
     if ax0 is not None:
         print(power_data[::-1, s].min(), power_data[::-1, s].max())
+        print(power_data.shape)
         im = ax0.imshow(power_data[::-1, s], interpolation='nearest', cmap='afmhot',
                         aspect='auto', vmin=vmin, vmax=vmax)
         yticklabels = [5, 25, 75]
@@ -433,20 +502,22 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False):
     return im
 
 
-def plot_correlations(subjects, ax, kind='freq', bb=False):
+def plot_correlations(subjects, ax, kind='freq', bb=False, bb2=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
     for subject in subjects:
         c = subject_colors[subject]
-        if bb:
+        if bb2:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb2.npz'.format(subject)))
+        elif bb:
             d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                         '{}_correlations_bb.npz'.format(subject)))
-            xcorr_freq = d['xcorr_freq']
         else:
             d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                         '{}_correlations.npz'.format(subject)))
-            xcorr_freq = d['xcorr_freq']
             xcorr_time = d['xcorr_time']
+        xcorr_freq = d['xcorr_freq']
 
         if kind == 'freq':
             mean = xcorr_freq.mean(axis=(1, 2))
@@ -461,11 +532,10 @@ def plot_correlations(subjects, ax, kind='freq', bb=False):
             ax.fill_between(x, mean-sem, mean+sem, alpha=.5,
                     facecolor=c)
             ax.set_xlim(0, 60)
-            ax.set_ylim(-.2, .3)
             ax.set_xlabel('Freq. (Hz)', **axes_label_fontstyle)
             ax.set_ylabel(r'H$\gamma$ Correlation', **axes_label_fontstyle)
-            ax.set_ylim(-.2, None)
-            ax.axhline(-.2, 15./60, 29./60, linestyle='-', c='black', lw=3.)
+            ax.set_ylim(-.22, .5)
+            ax.axhline(-.22, 15./60, 29./60, linestyle='-', c='black', lw=3.)
         elif kind == 'time':
             mean = xcorr_time.mean(axis=(1, 2))
             sem = xcorr_time.std(axis=(1, 2)) / np.sqrt(np.prod(xcorr_time.shape[1:]))
@@ -513,13 +583,18 @@ def plot_time_correlations(subjects, ax):
     ax.tick_params(**tickparams_fontstyle)
 
 
-def plot_correlation_histogram(subjects, ax, cs=None, bb=False):
+def plot_correlation_histogram(subjects, ax, cs=None, bb=False, bb2=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
         cs = len(subjects) * [cs]
 
     for subject, c in zip(subjects, cs):
-        if bb:
+        if bb2:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb2.npz'.format(subject)))
+            power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_bb2.npz'.format(subject)))['power_data']
+        elif bb:
             d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                         '{}_correlations_bb.npz'.format(subject)))
             power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
@@ -551,7 +626,11 @@ def plot_correlation_histogram(subjects, ax, cs=None, bb=False):
         ax.set_ylabel('Counts', **axes_label_fontstyle)
         ax.set_xlabel(r'H$\gamma$-$\beta$ Correlation', **axes_label_fontstyle)
 
-        if bb:
+        if bb2:
+            np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_cutoff_bb2.npz'.format(subject)), **{'cutoff': xp,
+                                                                                'cv_channels': power_data_not_flat >= cutoff})
+        elif bb:
             np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                                   '{}_hg_power_cutoff_bb.npz'.format(subject)), **{'cutoff': xp,
                                                                                 'cv_channels': power_data_not_flat >= cutoff})
@@ -562,13 +641,18 @@ def plot_correlation_histogram(subjects, ax, cs=None, bb=False):
     ax.tick_params(**tickparams_fontstyle)
 
 
-def plot_power_histogram(subjects, ax, cs=None, bb=False):
+def plot_power_histogram(subjects, ax, cs=None, bb=False, bb2=True):
     if not isinstance(subjects, list):
         subjects = [subjects]
         cs = len(subjects) * [cs]
 
     for subject, c in zip(subjects, cs):
-        if bb:
+        if bb2:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb2.npz'.format(subject)))
+            power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_bb2.npz'.format(subject)))['power_data']
+        elif bb:
             d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                         '{}_correlations_bb.npz'.format(subject)))
             power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
@@ -605,7 +689,7 @@ def plot_power_histogram(subjects, ax, cs=None, bb=False):
     ax.tick_params(**tickparams_fontstyle)
 
 
-def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=False):
+def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=False, bb2=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
 
@@ -620,7 +704,12 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=Fal
 
     for subject in subjects:
         c = subject_colors[subject]
-        if bb:
+        if bb2:
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb2.npz'.format(subject)))
+            power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_bb2.npz'.format(subject)))['power_data']
+        elif bb:
             d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                         '{}_correlations_bb.npz'.format(subject)))
             power_data = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
@@ -745,11 +834,16 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=Fal
             ax.plot(x, y, 'r--')
             ax.set_xlim(power_data.min(), -power_data.min())
 
-        if bb:
+        if bb2:
+            np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_cutoff_bb2.npz'.format(subject)), **{'cutoff': xp,
+                                                                                'cv_channels': power_data_not_flat >= cutoff})
+        elif bb:
             np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                                   '{}_hg_power_cutoff_bb.npz'.format(subject)), **{'cutoff': xp,
                                                                                 'cv_channels': power_data_not_flat >= cutoff})
         else:
+            print('hi')
             np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                                   '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
                                                                                 'cv_channels': power_data_not_flat >= cutoff})
@@ -776,7 +870,7 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=Fal
     return return_cutoff_pct
 
 
-def plot_resolved_power_correlations(subjects, ax, hline_c='gray', bb=False):
+def plot_resolved_power_correlations(subjects, ax, hline_c='gray', bb=False, bb2=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
 
@@ -785,7 +879,13 @@ def plot_resolved_power_correlations(subjects, ax, hline_c='gray', bb=False):
 
     for subject in subjects:
         c = subject_colors[subject]
-        if bb:
+        if bb2:
+            cv_channels = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_cutoff.npz'.format(subject)))['cv_channels']
+
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb2.npz'.format(subject)))
+        elif bb:
             cv_channels = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                                   '{}_hg_power_cutoff_bb.npz'.format(subject)))['cv_channels']
 
@@ -797,6 +897,7 @@ def plot_resolved_power_correlations(subjects, ax, hline_c='gray', bb=False):
 
             d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                         '{}_correlations.npz'.format(subject)))
+        print(cv_channels.sum())
         xcorr_freq = d['xcorr_freq']
 
         xcorr_freq_high = xcorr_freq[:, cv_channels]

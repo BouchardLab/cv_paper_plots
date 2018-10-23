@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 import scipy as sp
+import pandas as pd
 from matplotlib import cm
 from sklearn.linear_model import (RANSACRegressor, TheilSenRegressor,
                                   HuberRegressor)
@@ -38,13 +39,19 @@ def load_data(fname):
     return X, baselines, good_examples, good_channels, tokens, block_labels, labels
 
 
-def baseline_mean_std(block_labels, good_channels, baselines):
+def baseline_mean_std(block_labels, good_channels, baselines, mb=None, cfs=None):
     blocks = sorted(set(block_labels))
     bl_mean = np.zeros((len(blocks), 40, len(good_channels)))
     bl_std = np.zeros((len(blocks), 40, len(good_channels)))
     for ii, block in enumerate(blocks):
+        if mb is not None:
+            bb_mb = mb[block][0]
+            bb = calc_bb_estimate(cfs, bb_mb[...,0], bb_mb[...,1])
         for band in range(40):
             data = baselines[(block, band)][good_channels]
+            if (mb is not None) and (band < 29):
+                bb_i = bb[band]
+                data = data - bb_i
             bl_mean[ii, band] = data.mean(axis=-1)
             bl_std[ii, band] = data.std(axis=-1)
     return bl_mean, bl_std
@@ -53,7 +60,7 @@ def new_ch_idx(old_idx, good_channels):
     return (np.array(good_channels) == old_idx).argmax()
 
 
-def forward_bl(X, bl_type, bl_mean, bl_std, block_labels):
+def forward_bl(X, bl_type, bl_mean, bl_std, block_labels, mb=None, cfs=None):
     blocks = sorted(set(block_labels))
     means = np.full((X.shape[0], len(blocks), X.shape[2], 1), np.nan)
     for ii, block in enumerate(blocks):
@@ -62,6 +69,11 @@ def forward_bl(X, bl_type, bl_mean, bl_std, block_labels):
             X[:, idxs] /= bl_mean[ii, :, np.newaxis, :, np.newaxis]
         elif bl_type == 'bl_zscore':
             X[:, idxs] -= bl_mean[ii, :, np.newaxis, :, np.newaxis]
+            X[:, idxs] /= bl_std[ii, :, np.newaxis, :, np.newaxis]
+        elif bl_type == 'bl_zscore_bb':
+            bb = calc_bb_estimate(cfs, mb[idxs][..., 0], mb[idxs][..., 1])
+            bb[29:] = 0.
+            X[:, idxs] -= bb + bl_mean[ii, :, np.newaxis, :, np.newaxis]
             X[:, idxs] /= bl_std[ii, :, np.newaxis, :, np.newaxis]
         elif bl_type == 'data_mean':
             means[:, [ii]] = X[:, idxs].mean(axis=(1, 3), keepdims=True)
@@ -80,6 +92,10 @@ def invert_bl(X, bl_type, means, bl_mean, bl_std, block_labels):
         elif bl_type == 'bl_zscore':
             X[:, idxs] *= bl_std[ii, :, np.newaxis, :, np.newaxis]
             X[:, idxs] += bl_mean[ii, :, np.newaxis, :, np.newaxis]
+        elif bl_type == 'bl_zscore_bb':
+            bb = calc_bb_estimate(cfs, mb[idxs][..., 0], mb[idxs][..., 1])
+            X[:, idxs] *= bl_std[ii, :, np.newaxis, :, np.newaxis]
+            X[:, idxs] += bb + bl_mean[ii, :, np.newaxis, :, np.newaxis]
         elif bl_type == 'data_mean':
             X[:, idxs] *= means[:, [ii]]
         else:
@@ -152,8 +168,8 @@ def calculate_baselines(cfs, X, labels=None, kind=2, comm=None):
     return bls.reshape(shape + (2,)), medR2.reshape(shape)
 
 
-def fit_power_estimate(cfs, m, b):
-    for ii in range(m.ndims-1):
+def calc_bb_estimate(cfs, m, b):
+    for ii in range(m.ndim):
         cfs = cfs[..., np.newaxis]
     cfs = np.log(cfs)
     m = m[np.newaxis]
