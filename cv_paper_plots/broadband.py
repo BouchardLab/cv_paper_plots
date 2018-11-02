@@ -45,7 +45,10 @@ def baseline_mean_std(block_labels, good_channels, baselines, mb=None, cfs=None)
     bl_std = np.zeros((len(blocks), 40, len(good_channels)))
     for ii, block in enumerate(blocks):
         if mb is not None:
-            bb_mb = mb[block][0]
+            try:
+                bb_mb = mb[block][0]
+            except KeyError:
+                bb_mb = mb[str(block)][0]
             bb = calc_bb_estimate(cfs, bb_mb[...,0], bb_mb[...,1])
         for band in range(40):
             data = baselines[(block, band)][good_channels]
@@ -72,7 +75,7 @@ def forward_bl(X, bl_type, bl_mean, bl_std, block_labels, mb=None, cfs=None):
             X[:, idxs] /= bl_std[ii, :, np.newaxis, :, np.newaxis]
         elif bl_type == 'bl_zscore_bb':
             bb = calc_bb_estimate(cfs, mb[idxs][..., 0], mb[idxs][..., 1])
-            bb[29:] = 0.
+            bb[bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1]] = 0.
             X[:, idxs] -= bb + bl_mean[ii, :, np.newaxis, :, np.newaxis]
             X[:, idxs] /= bl_std[ii, :, np.newaxis, :, np.newaxis]
         elif bl_type == 'data_mean':
@@ -94,6 +97,7 @@ def invert_bl(X, bl_type, means, bl_mean, bl_std, block_labels):
             X[:, idxs] += bl_mean[ii, :, np.newaxis, :, np.newaxis]
         elif bl_type == 'bl_zscore_bb':
             bb = calc_bb_estimate(cfs, mb[idxs][..., 0], mb[idxs][..., 1])
+            bb[bands.chang_lab['cfs'] >= bands.neuro.min_freqs[-1]] = 0.
             X[:, idxs] *= bl_std[ii, :, np.newaxis, :, np.newaxis]
             X[:, idxs] += bb + bl_mean[ii, :, np.newaxis, :, np.newaxis]
         elif bl_type == 'data_mean':

@@ -944,10 +944,8 @@ def extract_b_hg(X, labels=None):
 
 
 def extract_b(X, labels=None):
-    hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
-                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
     b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
-                             bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][3])
+                             bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
     X_b = X[b_bands]
     if labels is None:
         return X_b
