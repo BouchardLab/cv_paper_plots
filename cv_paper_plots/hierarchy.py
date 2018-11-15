@@ -90,7 +90,7 @@ def plot_distance_vs_clusters(z, threshold, max_d, ax):
 
 def plot_cv_accuracy(cv_accuracy, ax):
     folds, n_cvs = cv_accuracy.shape
-    ax.barh(range(n_cvs), cv_accuracy.mean(axis=0)[::-1], height=.7,
+    ax.barh(range(n_cvs), np.nanmean(cv_accuracy, axis=0)[::-1], height=.7,
             edgecolor='k', color='none')
     ax.set_ylim(np.array([0, 57])-.5)
     ax.set_yticks([])
@@ -167,6 +167,8 @@ def load_predictions(folder, files):
             if y == yh:
                 correct[ii, y] += 1
             total[ii, y] += 1
+    print(total)
+    print(correct)
     cv_accuracy = correct / total
     yhs /= yhs.sum(axis=1, keepdims=True)
 

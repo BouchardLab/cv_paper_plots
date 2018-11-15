@@ -7,7 +7,7 @@ from sklearn.linear_model import (RANSACRegressor, TheilSenRegressor,
                                   HuberRegressor)
 
 from ecog.utils import bands
-from .xfreq_analysis import good_examples_and_channels
+from .xfreq_analysis import good_examples_and_channels, get_vsmc_electrodes
 
 
 
@@ -21,9 +21,7 @@ def load_data(fname):
                 block, band = int(items[2]), int(items[4])
                 baselines[(block, band)] = np.squeeze(value.value).astype('float32')
         good_examples, good_channels = good_examples_and_channels(f['X0'].value)
-        vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
-        vsmc_electrodes = np.zeros(256)
-        vsmc_electrodes[vsmc] = 1
+        vsmc_electrodes = get_vsmc_electrodes(f)
         tokens = f['tokens'].value.astype('str').tolist()
 
         good_examples = sorted(np.nonzero(good_examples)[0].tolist())

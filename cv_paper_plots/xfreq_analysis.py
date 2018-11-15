@@ -20,6 +20,14 @@ hg_power_idx = (hg_power_time * 200.).astype(int)
 hg_power_s = slice(*plot_idx.tolist())
 
 
+def get_vsmc_electrodes(f):
+    vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
+    vsmc_electrodes = np.zeros(256)
+    # Electrodes at 1-indexed
+    vsmc_electrodes[vsmc - 1] = 1
+    return vsmc_electrodes
+
+
 def good_examples_and_channels(data):
     """Find good examples and channels.
 
@@ -240,9 +248,9 @@ def save_correlations(f, subject, channel=None, bb=False, bb2=False):
         assert plot_idx[-1] <= n_time
         n_time = plot_idx[-1]
 
-        vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
-        vsmc_electrodes = np.zeros(256)
-        vsmc_electrodes[vsmc] = 1
+
+        vsmc_electrodes = get_vsmc_electrodes(f)
+
 
         good_examples = np.nonzero(good_examples)[0].tolist()
 
@@ -311,9 +319,7 @@ def save_time_correlations(f, subject, channel=None):
     assert plot_idx[-1] <= n_time
     n_time = plot_idx[-1]
 
-    vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
-    vsmc_electrodes = np.zeros(256)
-    vsmc_electrodes[vsmc] = 1
+    vsmc_electrodes = get_vsmc_electrodes(f)
 
     good_examples = np.nonzero(good_examples)[0].tolist()
 
@@ -400,9 +406,7 @@ def save_hg_power(f, subject, bb=False, bb2=False):
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_bb.npz'.format(subject)), **{'power_data': power_data})
     else:
-        vsmc = np.concatenate([f['anatomy']['preCG'].value, f['anatomy']['postCG'].value])
-        vsmc_electrodes = np.zeros(256)
-        vsmc_electrodes[vsmc] = 1
+        vsmc_electrodes = get_vsmc_electrodes(f)
 
         good_examples, good_channels = good_examples_and_channels(f['X0'].value)
         good_channels = np.nonzero(vsmc_electrodes * good_channels)[0].tolist()
