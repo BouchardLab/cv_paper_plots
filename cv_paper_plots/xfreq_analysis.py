@@ -429,7 +429,7 @@ def save_hg_power(f, subject, bb=False, bb2=False):
                               '{}_hg_power.npz'.format(subject)), **{'power_data': power_data})
 
 
-def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False, bb2=True):
+def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False, bb2=False):
     """Plot the power spectrum matrix.
 
     Parameters
@@ -645,7 +645,7 @@ def plot_correlation_histogram(subjects, ax, cs=None, bb=False, bb2=False):
     ax.tick_params(**tickparams_fontstyle)
 
 
-def plot_power_histogram(subjects, ax, cs=None, bb=False, bb2=True):
+def plot_power_histogram(subjects, ax, cs=None, bb=False, bb2=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
         cs = len(subjects) * [cs]
@@ -687,9 +687,18 @@ def plot_power_histogram(subjects, ax, cs=None, bb=False, bb2=True):
         ax.set_xlim(-.5, None)
         ax.set_xticks([-.5, 0, 1])
 
-        np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                              '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
-                                                                            'cv_channels': power_data_not_flat >= cutoff})
+        if bb2:
+            np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_cutoff_bb2.npz'.format(subject)), **{'cutoff': xp,
+                                                                                'cv_channels': power_data_not_flat >= cutoff})
+        elif bb:
+            np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_cutoff_bb.npz'.format(subject)), **{'cutoff': xp,
+                                                                                'cv_channels': power_data_not_flat >= cutoff})
+        else:
+            np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_cutoff.npz'.format(subject)), **{'cutoff': xp,
+                                                                                'cv_channels': power_data_not_flat >= cutoff})
     ax.tick_params(**tickparams_fontstyle)
 
 

@@ -144,7 +144,7 @@ def log_log_robust_regression(cfs, y, kind=0):
         raise ValueError
 
 
-def calculate_baselines(cfs, X, labels=None, kind=2, comm=None):
+def calc_bb_fit(cfs, X, labels=None, kind=2, comm=None):
     if labels is not None:
         cvs = sorted(set(labels))
         bls = np.full((len(cvs), X.shape[2], X.shape[3], 2), np.nan)
@@ -216,6 +216,7 @@ def plot_PC1s(pcs, evs, mean, faxes=None, title=False, ylabel=None):
     ax0.axhline(0, 0, 1, c='blue', ls='--')
     ax1.errorbar([0, 1], ratios.mean(axis=0), yerr=ratios.std(axis=0),
                  c='k', ls='none', marker='.')
+    ax1.axhline(1, 0, 1, linestyle='--', c='gray')
     pc0s = pcs[:, 0] / np.linalg.norm(pcs[:, 0], axis=1, keepdims=True)
     if mean is not None:
         mean = mean / np.linalg.norm(mean, axis=1, keepdims=True)
@@ -228,7 +229,7 @@ def plot_PC1s(pcs, evs, mean, faxes=None, title=False, ylabel=None):
         ax1.set_xlim(-1, 2)
     else:
         ax1.set_xticks([0, 1, 2])
-        ax1.set_xticklabels([r'$\frac{e_2}{e_1}$', r'$\frac{e_3}{e_1}$', r'$\mu\cdot V_1$'])
+        ax1.set_xticklabels([r'$\frac{e_2}{e_1}$', r'$\frac{e_3}{e_1}$', r'$|\mu\cdot PC1|$'])
         ax1.set_xlim(-1, 3)
     ax1.set_ylim(0, 1.1)
     ax1.set_yticks([0, 1])

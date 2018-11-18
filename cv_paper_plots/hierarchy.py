@@ -13,7 +13,7 @@ from .style import (subjects, subject_labels, subject_colors,
 
 def create_dendrogram(features, labels, color_threshold=None,
                       title=None, save_path=None, ax=None,
-                      deep=True):
+                      deep=True, audio=False):
     """
     Create dendrogram from data X. Averages over labels y.
     """
@@ -36,7 +36,18 @@ def create_dendrogram(features, labels, color_threshold=None,
     old_idx = []
     for cv in r['ivl']:
         old_idx.append(labels.index(cv))
-    if deep:
+    # sybilant: red
+    # alveolar: green
+    # dorsal tongue: blue
+    # labial: black
+    if audio:
+        groups = {'red': old_idx[0:9],
+                  'purple': old_idx[9:21],
+                  #'gray': old_idx[21:23],
+                  'darkkhaki': old_idx[21:41],
+                  #'gray': old_idx[37:41],
+                  'teal': old_idx[41:57]}
+    elif deep:
         groups = {'green': old_idx[0:13],
                   'red': old_idx[13:25],
                   'blue': old_idx[25:36],
@@ -55,10 +66,10 @@ def create_dendrogram(features, labels, color_threshold=None,
     return z, r
 
 
-def plot_dendrogram(yhs, threshold, cvs, max_d, ax, deep=False):
+def plot_dendrogram(yhs, threshold, cvs, max_d, ax, deep=True, audio=False):
     ax.axhline(threshold, 0, 1, linestyle='--', c='gray', lw=1)
 
-    z, r = create_dendrogram(yhs, cvs, threshold, ax=ax, deep=deep)
+    z, r = create_dendrogram(yhs, cvs, threshold, ax=ax, deep=deep, audio=audio)
     ax.set_xticks([])
     ax.set_ylabel('Distance', labelpad=0, **axes_label_fontstyle)
     ax.set_ylim(None, max_d)
@@ -94,9 +105,10 @@ def plot_cv_accuracy(cv_accuracy, ax):
             edgecolor='k', color='none')
     ax.set_ylim(np.array([0, 57])-.5)
     ax.set_yticks([])
-    ax.set_xticks([0, .5])
-    ax.set_xlim(0, .75)
-    ax.set_xticklabels([0, .5])
+    xlim = np.ceil(np.nanmean(cv_accuracy, axis=0).max() * 10.) / 10.
+    print(xlim)
+    ax.set_xlim(0, xlim)
+    ax.set_xticks([0, xlim])
     ax.tick_params(**tickparams_fontstyle)
     ax.set_xlabel('Accuracy', labelpad=0, **axes_label_fontstyle)
 
@@ -129,6 +141,9 @@ def plot_soft_confusion(yhs, r, f, ax, cax, deep=True):
         c.set_ticks([0, .1])
     else:
         c.set_ticks([0, .4])
+    xlim = np.floor(yhs.max() * 100.) / 100.
+    print(xlim)
+    c.set_ticks([0, xlim])
     c.ax.tick_params(**tickparams_fontstyle)
 
 
@@ -167,8 +182,6 @@ def load_predictions(folder, files):
             if y == yh:
                 correct[ii, y] += 1
             total[ii, y] += 1
-    print(total)
-    print(correct)
     cv_accuracy = correct / total
     yhs /= yhs.sum(axis=1, keepdims=True)
 
@@ -206,7 +219,7 @@ def load_correlations(folder, files):
         dmjar.append(data[3])
     return dp, dm, dv, dmjar
 
-def plot_correlations(dp, dm, dv, dmjar, ax, deep=True):
+def plot_correlations(dp, dm, dv, dmjar, ax, deep=True, audio=False):
 
     box_params = {'notch': False,
                   'sym': '',
@@ -236,15 +249,18 @@ def plot_correlations(dp, dm, dv, dmjar, ax, deep=True):
         ax.text(x+offset, .5 * (y0 + y1), n_stars*'⁎', fontsize=ticklabel_fontstyle['fontsize'],
                 verticalalignment='center')
 
-    if not (ttest_1samp(np.concatenate(dmjar), 0)[1] * 4 < .05):
-        raise ValueError
-    if not (ttest_1samp(np.concatenate(dp), 0)[1] * 4 < .05):
-        raise ValueError
-    if not (ttest_1samp(np.concatenate(dm), 0)[1] * 4 < .05):
-        raise ValueError
-    if not (ttest_1samp(np.concatenate(dv), 0)[1] * 4 < .05):
-        raise ValueError
-    if deep:
+    if not audio:
+        if not (ttest_1samp(np.concatenate(dmjar), 0)[1] * 4 < .05):
+            raise ValueError
+        if not (ttest_1samp(np.concatenate(dp), 0)[1] * 4 < .05):
+            raise ValueError
+        if not (ttest_1samp(np.concatenate(dm), 0)[1] * 4 < .05):
+            raise ValueError
+        if not (ttest_1samp(np.concatenate(dv), 0)[1] * 4 < .05):
+            raise ValueError
+    if audio:
+        pass
+    elif deep:
         if wilcoxon(np.concatenate(dmjar), np.concatenate(dp))[1] * 4 < 1e-10:
             draw_sig(ax, .15, 2, 3, 2)
             if not (ttest_1samp(np.concatenate(dmjar), 0)[1] * 4 < .05):
@@ -270,6 +286,9 @@ def plot_correlations(dp, dm, dv, dmjar, ax, deep=True):
             ax.text(-.07, 0, '⁎', fontsize=ticklabel_fontstyle['fontsize'], verticalalignment='center')
     bp = ax.boxplot(data, **box_params)
     ax.set_xlim([-.1, .65])
+    ax.axvline(0, 0, 1, linestyle='--', c='gray')
+    if audio:
+        ax.set_xlim([-.3, .5])
     ax.set_xlabel('Correlation Coefficient', **axes_label_fontstyle)
     ax.tick_params(**tickparams_fontstyle)
     for ii, x in enumerate([dv, dm, dp, dmjar]):
