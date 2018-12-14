@@ -17,13 +17,14 @@ def create_dendrogram(features, labels, color_threshold=None,
     """
     Create dendrogram from data X. Averages over labels y.
     """
-    def color(z, thresh, groups, k):
-        dist = z[k-57, 2]
-        child = z[k-57, 0].astype('int')
-        while child > 56:
-            child = z[child-57, 0].astype(int)
+    def color(z, thresh, groups, n_cvs, k):
+        dist = z[k-n_cvs, 2]
+        child = z[k-n_cvs, 0].astype('int')
+        while child > n_cvs-1:
+            child = z[child-n_cvs, 0].astype(int)
+        set_c = 'lightgray'
         if dist > thresh:
-            set_c = 'gray'
+            set_c = 'lightgray'
         else:
             for c, idxs in groups.items():
                 if child in idxs:
@@ -33,13 +34,16 @@ def create_dendrogram(features, labels, color_threshold=None,
     z = cluster.hierarchy.ward(features)
     r = cluster.hierarchy.dendrogram(z, labels=labels,
                                      no_plot=True)
-    old_idx = []
-    for cv in r['ivl']:
-        old_idx.append(labels.index(cv))
-    # sybilant: red
-    # alveolar: green
-    # dorsal tongue: blue
+    old_idx = [labels.index(cv) for cv in r['ivl']]
+    print(len(labels), labels)
+    print(len(r['ivl']), r['ivl'])
+    # sibilant: red
+    # alveolar: green (front)
+    # dorsal tongue: blue (back)
     # labial: black
+    # u: darkkhaki
+    # a: teal
+    # i: purple
     if audio:
         groups = {'red': old_idx[0:9],
                   'purple': old_idx[9:21],
@@ -48,20 +52,22 @@ def create_dendrogram(features, labels, color_threshold=None,
                   #'gray': old_idx[37:41],
                   'teal': old_idx[41:57]}
     elif deep:
-        groups = {'green': old_idx[0:13],
-                  'red': old_idx[13:25],
-                  'blue': old_idx[25:36],
-                  'black': old_idx[36:57]}
+        groups = {'black': old_idx[0:18],
+                  'darkkhaki': old_idx[18:31],
+                  'blue': old_idx[31:39],
+                  'dimgray': old_idx[39:54]}
+
     else:
-        groups = {'red': old_idx[0:12],
-                  'green': old_idx[12:25],
-                  'blue': old_idx[25:34],
-                  'black': old_idx[34:57]}
+        groups = {'black': old_idx[0:20],
+                  'blue': old_idx[20:30],
+                  'red': old_idx[30:38],
+                  'green': old_idx[38:54]}
 
     if color_threshold is not None:
+        print(labels)
         r = cluster.hierarchy.dendrogram(z, labels=labels,
                                          link_color_func=functools.partial(color,
-                                             z, color_threshold, groups),
+                                             z, color_threshold, groups, len(labels)),
                                          ax=ax)
     return z, r
 
@@ -103,7 +109,7 @@ def plot_cv_accuracy(cv_accuracy, ax):
     folds, n_cvs = cv_accuracy.shape
     ax.barh(range(n_cvs), np.nanmean(cv_accuracy, axis=0)[::-1], height=.7,
             edgecolor='k', color='none')
-    ax.set_ylim(np.array([0, 57])-.5)
+    ax.set_ylim(np.array([0, cv_accuracy.shape[1]])-.5)
     ax.set_yticks([])
     xlim = np.ceil(np.nanmean(cv_accuracy, axis=0).max() * 10.) / 10.
     print(xlim)
@@ -113,12 +119,19 @@ def plot_cv_accuracy(cv_accuracy, ax):
     ax.set_xlabel('Accuracy', labelpad=0, **axes_label_fontstyle)
 
 
-def plot_soft_confusion(yhs, r, f, ax, cax, deep=True):
+def plot_soft_confusion(yhs, r, f, ax, cax, deep=True, cutoff=None, hist=False):
+    n_cvs = yhs.shape[0]
+    if cutoff is None:
+        cutoff = yhs.max()
+    if hist:
+        f2, ax2 = plt.subplots(1)
+        ax2.hist(yhs.ravel(), bins=20)
+        ax2.set_yscale('log')
     im = ax.imshow(yhs, cmap='gray_r', interpolation='nearest',
-            vmin=0, vmax=yhs.max())
-    ax.set_xticks(np.linspace(0, 56, 57))
+            vmin=0, vmax=cutoff)
+    ax.set_xticks(np.linspace(0, n_cvs-1, n_cvs))
     ax.set_xticklabels(r['ivl'], **ticklabel_fontstyle)
-    ax.set_yticks(np.linspace(0, 56, 57))
+    ax.set_yticks(np.linspace(0, n_cvs-1, n_cvs))
     ax.set_yticklabels(r['ivl'], **ticklabel_fontstyle)
     ax.set_ylabel('Target CV', **axes_label_fontstyle)
     ax.set_xlabel('Predicted CV', **axes_label_fontstyle)
@@ -137,17 +150,13 @@ def plot_soft_confusion(yhs, r, f, ax, cax, deep=True):
     #ax.tick_params(**tickparams_fontstyle)
 
     c = f.colorbar(im, cax=cax, orientation='horizontal')
-    if deep:
-        c.set_ticks([0, .1])
-    else:
-        c.set_ticks([0, .4])
-    xlim = np.floor(yhs.max() * 100.) / 100.
+    xlim = np.floor(cutoff * 100.) / 100.
     print(xlim)
     c.set_ticks([0, xlim])
     c.ax.tick_params(**tickparams_fontstyle)
 
 
-def load_predictions(folder, files):
+def load_predictions(folder, files, drop=None):
     consonants = ['b', 'd', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'r',
                   's', r'$\int$', 't', r'$\theta$', 'v', 'w', 'j', 'z']
     vowels = ['a', 'i', 'u']
@@ -184,6 +193,13 @@ def load_predictions(folder, files):
             total[ii, y] += 1
     cv_accuracy = correct / total
     yhs /= yhs.sum(axis=1, keepdims=True)
+    if drop is not None:
+        keep = np.ones(57, dtype=bool)
+        keep[[cvs.index(cv) for cv in drop]] = False
+
+        yhs = yhs[keep][:, keep]
+        cv_accuracy = cv_accuracy[:, keep]
+        cvs = np.array(cvs)[keep].tolist()
 
 
     z, r = create_dendrogram(yhs, cvs)
@@ -262,20 +278,21 @@ def plot_correlations(dp, dm, dv, dmjar, ax, deep=True, audio=False):
         pass
     elif deep:
         if wilcoxon(np.concatenate(dmjar), np.concatenate(dp))[1] * 4 < 1e-10:
-            draw_sig(ax, .15, 2, 3, 2)
+            draw_sig(ax, .14, 2, 3, 2)
             if not (ttest_1samp(np.concatenate(dmjar), 0)[1] * 4 < .05):
                 raise ValueError
         if wilcoxon(np.concatenate(dp), np.concatenate(dm))[1] * 4 < 1e-10:
-            draw_sig(ax, -.03, 1, 2, 2)
+            draw_sig(ax, -.04, 1, 2, 2)
             if not (ttest_1samp(np.concatenate(dp), 0)[1] * 4 < .05):
                 raise ValueError
         if wilcoxon(np.concatenate(dmjar), np.concatenate(dm))[1] * 4 < 1e-10:
-            draw_sig(ax, -.06, 1, 3, 2)
+            draw_sig(ax, -.065, 1, 3, 2)
             if not (ttest_1samp(np.concatenate(dm), 0)[1] * 4 < .05):
                 raise ValueError
         if ttest_1samp(np.concatenate(dv), 0)[1] * 4 < 1e-4:
-            ax.text(-.07, 0, '⁎', fontsize=ticklabel_fontstyle['fontsize'], verticalalignment='center')
+            ax.text(-.06, 0, '⁎', fontsize=ticklabel_fontstyle['fontsize'], verticalalignment='center')
     else:
+        """
         if wilcoxon(np.concatenate(dmjar), np.concatenate(dp))[1] * 4 < 1e-10:
             draw_sig(ax, .095, 2, 3, 2)
         if wilcoxon(np.concatenate(dp), np.concatenate(dm))[1] * 4 < 1e-10:
@@ -284,6 +301,8 @@ def plot_correlations(dp, dm, dv, dmjar, ax, deep=True, audio=False):
             draw_sig(ax, -.06, 1, 3, 2)
         if ttest_1samp(np.concatenate(dv), 0)[1] * 4 < 1e-4:
             ax.text(-.07, 0, '⁎', fontsize=ticklabel_fontstyle['fontsize'], verticalalignment='center')
+            """
+        pass
     bp = ax.boxplot(data, **box_params)
     ax.set_xlim([-.1, .65])
     ax.axvline(0, 0, 1, linestyle='--', c='gray')
@@ -297,6 +316,6 @@ def plot_correlations(dp, dm, dv, dmjar, ax, deep=True, audio=False):
                 label = subject_labels[s]
             else:
                 label = None
-            plt.plot(np.median(xs), ii, 'o',
+            ax.plot(np.median(xs), ii, 'o',
                      markersize=4, c=subject_colors[s], label=label)
     ax.legend(loc='lower right', ncol=2, prop={'size': ticklabel_fontstyle['fontsize']})

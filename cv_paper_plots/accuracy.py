@@ -46,33 +46,33 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
         p = wilcoxon(data[0].ravel(), data[1].ravel())[1] * 5
         print('all subject: p={}'.format(p))
 
-        diff = data[1] - data[0]
-        task_name = task.split(' ')[0].replace('\n', ' ').lower()
-        s1 = ('The highest deep network accuracy for a single subject ' +
-              'on the {} task is for Subject 1 which is {} $\pm$ {}\% ' +
-              '({} times chance, {}\%) and {} $\pm$ {}\% ({} times chance, ' +
-              '{}\%) for logistic regression and deep networks ' +
-              'respectively, which is a {}\% ' +
-              'improvement.')
-        s1 = s1.format(task_name,
-                       np.round(100 * data[1,0].mean(), 1),
-                       np.round(100 * data[1,0].std(), 1),
-                       np.round((data[1,0] / data[2,0]).mean(), 1),
-                       np.round(100 * data[2,0].mean(), 1),
-                       np.round(100 * data[0,0].mean(), 1),
-                       np.round(100 * data[0,0].std(), 1),
-                       np.round((data[0,0] / data[2,0]).mean(), 1),
-                       np.round(100 * data[2,0].mean(), 1),
-                       np.round(100 * ((data[1, 0] / data[0,0]).mean() - 1), 1))
-        s2 = ('Mean {} classification accuracy across subjects (XX way) ' +
-              'with deep networks is {} $\pm$ {}\%. For logistic regression, ' +
-              'it is {} $\pm$ {}\%.')
-        s2 = s2.format(task_name,
-                       np.round(100 * data[1].mean(), 1),
-                       np.round(100 * data[1].std(), 1),
-                       np.round(100 * data[0].mean(), 1),
-                       np.round(100 * data[0].std(), 1))
-        print(s1 + ' ' + s2 + '\n')
+    diff = data[1] - data[0]
+    task_name = task.split(' ')[0].replace('\n', ' ').lower()
+    s1 = ('The highest deep network accuracy for a single subject ' +
+          'on the {} task is for Subject 1 which is {} $\pm$ {}\% ' +
+          '({} times chance, {}\%) and {} $\pm$ {}\% ({} times chance, ' +
+          '{}\%) for logistic regression and deep networks ' +
+          'respectively, which is a {}\% ' +
+          'improvement.')
+    s1 = s1.format(task_name,
+                   np.round(100 * data[1,0].mean(), 1),
+                   np.round(100 * data[1,0].std(), 1),
+                   np.round((data[1,0] / data[2,0]).mean(), 1),
+                   np.round(100 * data[2,0].mean(), 1),
+                   np.round(100 * data[0,0].mean(), 1),
+                   np.round(100 * data[0,0].std(), 1),
+                   np.round((data[0,0] / data[2,0]).mean(), 1),
+                   np.round(100 * data[2,0].mean(), 1),
+                   np.round(100 * ((data[1, 0] / data[0,0]).mean() - 1), 1))
+    s2 = ('Mean {} classification accuracy across subjects (XX way) ' +
+          'with deep networks is {} $\pm$ {}\%. For logistic regression, ' +
+          'it is {} $\pm$ {}\%.')
+    s2 = s2.format(task_name,
+                   np.round(100 * data[1].mean(), 1),
+                   np.round(100 * data[1].std(), 1),
+                   np.round(100 * data[0].mean(), 1),
+                   np.round(100 * data[0].std(), 1))
+    print(s1 + ' ' + s2 + '\n')
 
     if legend:
         ax.legend(loc='upper left', prop={'size': ticklabel_fontstyle['fontsize']})
@@ -94,12 +94,18 @@ def plot_cv_accuracy(subjects, deep, linear, random, ax, task='Consonant\nVowel'
         ax.set_yticklabels([0, .5, 1])
     elif ymax == .5:
         ax.set_yticks([0, .25, .5])
+    elif ymax == .7:
+        ax.set_yticks([0, .5])
     elif ymax is not None and ymax < 3:
         ax.set_yticks([1, 2])
+    elif ymax is not None and ymax == 3.:
+        ax.set_yticks([1, 2, 3])
     elif ymax is not None and ymax < 10:
         ax.set_yticks([1, 5, 9])
+    elif ymax is not None and ymax < 15:
+        ax.set_yticks([1, 5, 10])
     else:
-        ax.set_yticks([1, 5, 10, 15, 20])
+        ax.set_yticks([1, 5, 10, 15, 20, 25, 30, 35])
     ax.tick_params(**tickparams_fontstyle)
 
 def mutual_information(Pyhy, logPy):

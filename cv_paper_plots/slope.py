@@ -15,7 +15,7 @@ from .stats import (permute_paired_diffs,
                     parametric_slopes_test)
 
 def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
-                  legend=False, show_significance=False, normalize_chance=False):
+                  legend=False, show_significance=False, normalize_chance=True):
     ax0, ax1 = axes
     lw = 2
     n_subjects, _, n_iter = deep[keys[0]].shape
@@ -70,6 +70,7 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
         for ii in range(y.shape[1]):
             slopes_crossval[1, jj, ii] = linregress(x[:, ii], y[:, ii])[0]
         slope1, intercept1, r_value1, p_value1, std_err1 = linregress(x.ravel(), y.ravel())
+        print(s, slope1, std_err1)
         #print(slope1, r_value1, p_value1, std_err1)
         p = parametric_slopes_test(slope0, std_err0, x.size, slope1, std_err1, x.size) * 4
         slopes[0, jj] = slope0, std_err0, p
@@ -102,7 +103,7 @@ def plot_cv_slope(subjects, deep, linear, random, training_size, keys, axes,
     if normalize_chance:
         ax0.axhline(1, c='steelblue', linestyle='--', lw=1)
         ax0.set_ylabel('Accuracy/chance', **axes_label_fontstyle)
-        ax0.set_yticks([1, 5, 10, 15, 20])
+        ax0.set_yticks([1, 10, 20, 30])
     else:
         ax0.set_ylabel('Accuracy', **axes_label_fontstyle)
         ax0.set_yticks([0, .25, .5])

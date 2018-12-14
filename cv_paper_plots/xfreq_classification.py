@@ -9,7 +9,8 @@ from .style import (subject_colors, subject_labels,
                     tickparams_fontstyle)
 
 def plot_xfreq_classification(subjects, band_abbreviations, bands,
-                              single_accuracy, multi_accuracy, chance, axes):
+                              single_accuracy, multi_accuracy, chance, axes,
+                              legend=False):
     ax0, ax1 = axes
     for ii, ba in enumerate(band_abbreviations):
         y = single_accuracy[ba][:, 2]
@@ -21,11 +22,11 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
         pB = wilcoxon(y.ravel(), y_hg.ravel())[1] * 5
         print('{}, pB: {:0.2e}\n'.format(ba, pB))
         if pA < 1e-3:
-            ax0.text(ii, .75, '⁎⁎', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
+            ax0.text(ii, .5, '⁎⁎', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
         elif pA < 1e-2:
-            ax0.text(ii, .75, '⁎', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
+            ax0.text(ii, .5, '⁎', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
         else:
-            ax0.text(ii, .75, 'n.s.', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
+            ax0.text(ii, .5, 'n.s.', fontsize=ticklabel_fontstyle['fontsize'], horizontalalignment='center')
         for jj, (s, ch) in enumerate(zip(subjects, chance)):
             col = subject_colors[s]
             x = ii + .125 *(jj-1.5)
@@ -53,7 +54,7 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
         col = subject_colors[s]
         y = single_accuracy['hg'][jj, 2] / ch
         std = y.std()
-        ax1.plot([5. + .1 * (jj-1.5), 5. + .1 * (jj-1.5)], [-std, std], c=col)
+        ax1.plot([len(band_abbreviations) + .1 * (jj-1.5), len(band_abbreviations) + .1 * (jj-1.5)], [-std, std], c=col)
         """
         ax1.plot([ii - .2, ii + .2],
                  2 * [np.mean((multi_accuracy[ba][:, 2] -
@@ -64,22 +65,23 @@ def plot_xfreq_classification(subjects, band_abbreviations, bands,
         ax.tick_params(**tickparams_fontstyle)
     ax0.set_xticks(np.arange(len(band_abbreviations)))
     ax0.set_xticklabels(bands)
-    ax0.set_xlim(-.5, 4.5)
+    ax0.set_xlim(-.5, len(band_abbreviations) - 0.5)
     ax1.set_xticks(np.arange(len(band_abbreviations) + 1))
     ax1.set_xticklabels(bands + [r'H$\gamma$ std.'])
-    ax1.set_xlim(-.5, 5.5)
-    ax0.set_ylim(.5, None)
-    ax0.set_yticks([1, 2, 3])
+    ax1.set_xlim(-.5, len(band_abbreviations) + .5)
+    ax0.set_ylim(.25, None)
+    ax0.set_yticks([1, 2, 3, 4])
     ax0.set_ylabel('Accuracy/chance', **axes_label_fontstyle)
     ax1.set_ylabel(r'$\Delta$ % Accuracy', **axes_label_fontstyle)
     ax1.set_ylabel(r'$\Delta$ Accuracy/HG', **axes_label_fontstyle)
     ax1.set_ylabel(r'$\Delta$ Accuracy/chance', **axes_label_fontstyle)
     ax0.plot([-10, 10], [1, 1], '--', c='steelblue', lw=.5)
     ax1.plot([-10, 10], [0, 0], '--', c='steelblue', lw=.5)
-    ax1.legend(loc='lower left', fontsize=ticklabel_fontstyle['fontsize'], ncol=2)
+    if legend:
+        ax1.legend(loc='lower left', fontsize=ticklabel_fontstyle['fontsize'], ncol=2)
 
 def plot_correlation_vs_accuracy(subjects, band_abbreviations, bands,
-                                 single_accuracy, multi_accuracy, chance, axes):
+                                 single_accuracy, multi_accuracy, chance, axes, bb2=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
 
@@ -89,11 +91,18 @@ def plot_correlation_vs_accuracy(subjects, band_abbreviations, bands,
 
     for ii, (s, ch) in enumerate(zip(subjects, chance)):
         c = subject_colors[s]
-        cv_channels = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                              '{}_hg_power_cutoff.npz'.format(s)))['cv_channels']
+        if bb2:
+            cv_channels = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_cutoff_bb2.npz'.format(s)))['cv_channels']
 
-        d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                    '{}_correlations.npz'.format(s)))
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations_bb2.npz'.format(s)))
+        else:
+            cv_channels = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                                  '{}_hg_power_cutoff.npz'.format(s)))['cv_channels']
+
+            d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
+                        '{}_correlations.npz'.format(s)))
         xcorr_freq = d['xcorr_freq']
 
         xcorr_freq_high = xcorr_freq[:, cv_channels]

@@ -83,7 +83,7 @@ def get_cv_idxs(y, good_examples):
 
     cv_idxs = [sorted(list(set(idxs).intersection(good_examples))) for idxs in cv_idxs]
     cv_idxs = [idxs for idxs in cv_idxs if len(idxs) > 0]
-    return cv_idxs, n_cv
+    return cv_idxs, n_cv, keep_cvs
 
 
 def save_power(f, channel, cv, subject, bb=False, bb2=False):
@@ -153,7 +153,7 @@ def save_correlations(f, subject, channel=None, bb=False, bb2=False):
         n_ch = X.shape[2]
         n_ex = X.shape[1]
 
-        cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
+        cv_idxs, n_cv, _ = get_cv_idxs(y, np.arange(n_ex))
 
         def normalize(a):
             a -= np.mean(a, axis=-1, keepdims=True)
@@ -202,7 +202,7 @@ def save_correlations(f, subject, channel=None, bb=False, bb2=False):
         n_ch = X.shape[2]
         n_ex = X.shape[1]
 
-        cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
+        cv_idxs, n_cv, _ = get_cv_idxs(y, np.arange(n_ex))
 
         def normalize(a):
             a -= np.mean(a, axis=-1, keepdims=True)
@@ -259,7 +259,7 @@ def save_correlations(f, subject, channel=None, bb=False, bb2=False):
             assert channel in good_channels
             good_channels = [channel]
 
-        cv_idxs, n_cv = get_cv_idxs(f['y'].value, good_examples)
+        cv_idxs, n_cv, _ = get_cv_idxs(f['y'].value, good_examples)
 
         n_ch = len(good_channels)
         n_ex = len(good_examples)
@@ -328,7 +328,7 @@ def save_time_correlations(f, subject, channel=None):
         assert channel in good_channels
         good_channels = [channel]
 
-    cv_idxs, n_cv = get_cv_idxs(f['y'].value, good_examples)
+    cv_idxs, n_cv, _ = get_cv_idxs(f['y'].value, good_examples)
 
     n_ch = len(good_channels)
     n_ex = len(good_examples)
@@ -380,9 +380,10 @@ def save_hg_power(f, subject, bb=False, bb2=False):
         n_ch = X.shape[2]
         n_ex = X.shape[1]
 
-        cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
+        cv_idxs, n_cv, keep_cvs = get_cv_idxs(y, np.arange(n_ex))
 
-        power_data = extract_hg(X, labels=y).mean(axis=0)[..., s]
+        power_data = extract_hg(X, labels=y, full=True).mean(axis=0)[..., s]
+        power_data = power_data[keep_cvs]
         np.savez(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                               '{}_hg_power_bb2.npz'.format(subject)), **{'power_data': power_data})
     elif bb:
@@ -398,7 +399,7 @@ def save_hg_power(f, subject, bb=False, bb2=False):
         n_ch = X.shape[2]
         n_ex = X.shape[1]
 
-        cv_idxs, n_cv = get_cv_idxs(y, np.arange(n_ex))
+        cv_idxs, n_cv, _ = get_cv_idxs(y, np.arange(n_ex))
 
         power_data = np.zeros((n_cv, n_ch, n_time))
         for jj, idxs in enumerate(cv_idxs):
@@ -414,7 +415,7 @@ def save_hg_power(f, subject, bb=False, bb2=False):
 
         good_examples = np.nonzero(good_examples)[0].tolist()
 
-        cv_idxs, n_cv = get_cv_idxs(f['y'].value, good_examples)
+        cv_idxs, n_cv, _ = get_cv_idxs(f['y'].value, good_examples)
 
         hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
                                   bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
@@ -429,7 +430,7 @@ def save_hg_power(f, subject, bb=False, bb2=False):
                               '{}_hg_power.npz'.format(subject)), **{'power_data': power_data})
 
 
-def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False, bb2=False):
+def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False, bb2=False, elabel=None):
     """Plot the power spectrum matrix.
 
     Parameters
@@ -465,7 +466,9 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False, bb2=F
         yticks.append(0)
         ax0.set_yticks(yticks)
         ax0.set_yticklabels(yticklabels)
-        ax0.set_title('Electrode: {}'.format(channel), **axes_label_fontstyle)
+        if elabel is None:
+            elabel = channel
+        ax0.set_title('Electrode: {}'.format(elabel), **axes_label_fontstyle)
         ax0.set_ylabel('Freq. (Hz)', **axes_label_fontstyle)
         ax0.axvline(100, 0, 1, linestyle='--', c='white', lw=1.)
         #ax0.set_xlabel('Time (ms)', fontsize=axes_label_fontsize)
@@ -509,6 +512,8 @@ def plot_power(subject, channel, cv, axes, vmin=None, vmax=None, bb=False, bb2=F
 def plot_correlations(subjects, ax, kind='freq', bb=False, bb2=False):
     if not isinstance(subjects, list):
         subjects = [subjects]
+    miny = np.inf
+    maxy = -np.inf
     for subject in subjects:
         c = subject_colors[subject]
         if bb2:
@@ -530,6 +535,8 @@ def plot_correlations(subjects, ax, kind='freq', bb=False, bb2=False):
             x = bands.chang_lab['cfs'][idxs]
             mean = mean[idxs]
             sem = sem[idxs]
+            maxy = max(maxy, (mean+sem).max())
+            miny = min(miny, (mean-sem).min())
             ax.plot(x, mean, c,
                     label=subject_labels[subject].replace('ect', '.'),
                     lw=1)
@@ -539,7 +546,6 @@ def plot_correlations(subjects, ax, kind='freq', bb=False, bb2=False):
             ax.set_xlabel('Freq. (Hz)', **axes_label_fontstyle)
             ax.set_ylabel(r'H$\gamma$ Correlation', **axes_label_fontstyle)
             ax.set_ylim(-.22, .5)
-            ax.axhline(-.22, 15./60, 29./60, linestyle='-', c='black', lw=3.)
         elif kind == 'time':
             mean = xcorr_time.mean(axis=(1, 2))
             sem = xcorr_time.std(axis=(1, 2)) / np.sqrt(np.prod(xcorr_time.shape[1:]))
@@ -552,6 +558,12 @@ def plot_correlations(subjects, ax, kind='freq', bb=False, bb2=False):
             ax.set_ylabel(r'H$\gamma$-$\beta$ Correlation', **axes_label_fontstyle)
         else:
             raise NotImplementedError
+    print(miny, maxy)
+    miny = np.floor(10. * miny) / 10.
+    maxy = np.ceil(10. * maxy) / 10.
+    print(miny, maxy)
+    ax.set_ylim(miny, maxy)
+    ax.axhline(miny, 15./60, 29./60, linestyle='-', c='black', lw=3.)
     ax.legend(loc='upper left', ncol=2,
               prop={'size': ticklabel_fontstyle['fontsize']},
               labelspacing=.2, columnspacing=.6,
@@ -738,6 +750,7 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=Fal
 
         n_time = xcorr_time.shape[0]
         corr_data = np.ravel(xcorr_time[n_time // 2])
+        print(power_data.shape, xcorr_time.shape)
 
         pos = power_data >= 0
         x, y = power_data[pos], corr_data[pos]
@@ -771,7 +784,9 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=Fal
         xp = -intercept / slope
         cutoff = xp
         if cutoff_pct is not None:
-            cutoff = np.percentile(pos, cutoff_pct)
+            cutoff = np.percentile(power_data, cutoff_pct)
+            #cutoff = np.percentile(power_data, cutoff_pct)
+            print(subject, cutoff, power_data.max())
         cutoffs.append(cutoff)
         x_cutoff = max(cutoff, x_cutoff)
         x_cutoffs.append(x_cutoff)
@@ -833,7 +848,7 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=Fal
             if cutoff_pct is None:
                 ax.plot(x, y, '-', c=c, alpha=.5)
             if cutoff_pct is None:
-                return_cutoff_pct.append((pos < cutoff).sum() / pos.size)
+                return_cutoff_pct.append(100. * (power_data < cutoff).mean())
         else:
             raise NotImplementedError
             neg = power_data < 0
@@ -866,12 +881,13 @@ def plot_power_correlations(subjects, ax, pos_only=True, cutoff_pct=None, bb=Fal
     y_width = ymax - ymin
     y_center = (ymax + ymin) / 2.
     width = max(x_width, y_width)
-    for cutoff, x_cutoff in zip(cutoffs, x_cutoffs):
-        if cutoff > 0:
-            ax.axvline(cutoff, 0,  abs(y_center - width / 2.)/ width,
-                       linestyle='--', c='gray', lw=1.)
-            ax.axhline(0, 0, (x_cutoff - x_center + width / 2.) / width,
-                       linestyle='--', c='gray', lw=1.)
+    if cutoff_pct is None:
+        for cutoff, x_cutoff in zip(cutoffs, x_cutoffs):
+            if cutoff > 0:
+                ax.axvline(cutoff, 0,  abs(y_center - width / 2.)/ width,
+                           linestyle='--', c='gray', lw=1.)
+                ax.axhline(0, 0, (x_cutoff - x_center + width / 2.) / width,
+                           linestyle='--', c='gray', lw=1.)
     ax.set_xlim(0, width)
     ax.set_ylim(y_center - width / 2., y_center + width / 2.)
     ax.set_xticks([0, .75])
@@ -894,7 +910,7 @@ def plot_resolved_power_correlations(subjects, ax, hline_c='gray', bb=False, bb2
         c = subject_colors[subject]
         if bb2:
             cv_channels = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
-                                  '{}_hg_power_cutoff.npz'.format(subject)))['cv_channels']
+                                  '{}_hg_power_cutoff_bb2.npz'.format(subject)))['cv_channels']
 
             d = np.load(os.path.join(os.environ['HOME'], 'plots/xfreq/data',
                         '{}_correlations_bb2.npz'.format(subject)))
@@ -956,14 +972,17 @@ def extract_b_hg(X, labels=None):
     return extract_b(X, labels), extract_hg(X, labels)
 
 
-def extract_b(X, labels=None):
+def extract_b(X, labels=None, full=False):
     b_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][2],
                              bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][2])
     X_b = X[b_bands]
     if labels is None:
         return X_b
     else:
-        cvs = sorted(set(labels))
+        if full:
+            cvs = np.arange(57)
+        else:
+            cvs = sorted(set(labels))
         shape = X_b.shape
         shapep = (shape[0], len(cvs)) + shape[2:]
         Xp = np.full(shapep, np.nan)
@@ -972,14 +991,17 @@ def extract_b(X, labels=None):
             Xp[:, ii] = X_b[:, idxs].mean(axis=1)
         return Xp
 
-def extract_hg(X, labels=None):
+def extract_hg(X, labels=None, full=False):
     hg_bands = np.logical_and(bands.chang_lab['cfs'] >= bands.neuro['min_freqs'][-1],
                               bands.chang_lab['cfs'] <= bands.neuro['max_freqs'][-1])
     X_hg = X[hg_bands]
     if labels is None:
         return X_hg
     else:
-        cvs = sorted(set(labels))
+        if full:
+            cvs = np.arange(57)
+        else:
+            cvs = sorted(set(labels))
         shape = X_hg.shape
         shapep = (shape[0], len(cvs)) + shape[2:]
         Xp = np.full(shapep, np.nan)
